@@ -1,5 +1,12 @@
 {
   "projects": {
     "default": "asiergonzalez-web-app"
+  },
+  "targets": {
+    "asiergonzalez-web-app": {
+      "hosting": {
+        "admin": ["asiergonzalez-admin"]
+      }
+    }
   }
 }

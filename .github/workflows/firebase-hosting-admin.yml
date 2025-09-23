@@ -52,6 +52,7 @@ jobs:
         repoToken: ${{ secrets.GITHUB_TOKEN }}
         firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ASIERGONZALEZ_WEB_APP }}
         projectId: ${{ secrets.EXPO_PUBLIC_FIREBASE_PROJECT_ID }}
+        target: admin
         
     - name: Deploy to Firebase Hosting (Production)
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -60,4 +61,5 @@ jobs:
         repoToken: ${{ secrets.GITHUB_TOKEN }}
         firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ASIERGONZALEZ_WEB_APP }}
         projectId: ${{ secrets.EXPO_PUBLIC_FIREBASE_PROJECT_ID }}
+        target: admin
         channelId: live
