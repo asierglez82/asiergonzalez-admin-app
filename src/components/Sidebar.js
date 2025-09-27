@@ -17,16 +17,6 @@ const Sidebar = ({ navigation, state }) => {
       description: 'Crear y editar contenido'
     },
     { 
-      name: 'Editorial Calendar', 
-      route: 'Calendar',
-      description: 'Programar publicaciones'
-    },
-    { 
-      name: 'CRM & Contacts', 
-      route: 'CRM',
-      description: 'Gestión de contactos'
-    },
-    { 
       name: 'Analytics', 
       route: 'Analytics',
       description: 'Métricas y reportes'

@@ -1,7 +1,40 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { Feather, Ionicons } from '@expo/vector-icons';
 
-const ContentEditorScreen = () => {
+const { width } = Dimensions.get('window');
+
+const ContentEditorScreen = ({ navigation }) => {
+  const [windowWidth, setWindowWidth] = useState(width);
+
+  useEffect(() => {
+    const onChange = ({ window }) => setWindowWidth(window.width);
+    const subscription = Dimensions.addEventListener('change', onChange);
+    return () => {
+      if (subscription && typeof subscription.remove === 'function') {
+        subscription.remove();
+      }
+    };
+  }, []);
+
+  const actionsPerRow = windowWidth < 420 ? 1 : windowWidth >= 1100 ? 3 : 2;
+  const horizontalPadding = 48; // 24 + 24
+  const interItemGap = 12;
+  const actionCardWidth = (windowWidth - horizontalPadding - (actionsPerRow - 1) * interItemGap) / actionsPerRow;
+
+  const ActionCard = ({ title, description, color, icon, onPress }) => (
+    <TouchableOpacity style={[styles.actionCard, { width: actionCardWidth }]} onPress={onPress}>
+      <View style={[styles.iconSquare, { backgroundColor: `${color}20`, borderColor: color }] }>
+        <Ionicons name={icon} size={18} color={color} />
+      </View>
+      <View style={styles.actionContent}>
+        <Text style={styles.cardTitle}>{title}</Text>
+        <Text style={styles.cardDescription}>{description}</Text>
+      </View>
+      <View style={[styles.cardAccent, { backgroundColor: color }]} />
+    </TouchableOpacity>
+  );
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       <View style={styles.header}>
@@ -9,44 +42,148 @@ const ContentEditorScreen = () => {
         <Text style={styles.subtitle}>Crear y editar posts, proyectos y más</Text>
       </View>
 
-      <View style={styles.content}>
-        <View style={styles.card}>
-          <Text style={styles.cardIcon}>✍️</Text>
-          <Text style={styles.cardTitle}>Nuevo Blog Post</Text>
-          <Text style={styles.cardDescription}>Crear una nueva entrada del blog</Text>
-        </View>
+      {/* Sección de Creación */}
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Crear Contenido</Text>
+        <Text style={styles.sectionSubtitle}>Crear nuevos elementos de contenido</Text>
+      </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardIcon}>💼</Text>
-          <Text style={styles.cardTitle}>Nuevo Proyecto</Text>
-          <Text style={styles.cardDescription}>Agregar proyecto al portfolio</Text>
-        </View>
+      <View style={styles.actionsGrid}>
+        <ActionCard
+          title="Nuevo Blog Post"
+          description="Crear una nueva entrada del blog"
+          color="#007AFF"
+          icon="create-outline"
+          onPress={() => navigation.navigate('CreatePost')}
+        />
+        <ActionCard
+          title="Nuevo Proyecto"
+          description="Agregar proyecto al portfolio"
+          color="#FF9F0A"
+          icon="briefcase-outline"
+          onPress={() => navigation.navigate('CreateProject')}
+        />
+        <ActionCard
+          title="Nueva Quote"
+          description="Compartir una reflexión"
+          color="#FF2D92"
+          icon="chatbox-ellipses-outline"
+          onPress={() => navigation.navigate('CreateQuote')}
+        />
+        <ActionCard
+          title="Episodio Podcast"
+          description="Nuevo episodio del podcast"
+          color="#FF3B30"
+          icon="mic-outline"
+          onPress={() => navigation.navigate('CreatePodcast')}
+        />
+        <ActionCard
+          title="Reseña de Libro"
+          description="Agregar libro al catálogo"
+          color="#5856D6"
+          icon="book-outline"
+          onPress={() => navigation.navigate('CreateBook')}
+        />
+        <ActionCard
+          title="Nueva Conferencia"
+          description="Agregar conferencia al portfolio"
+          color="#34C759"
+          icon="calendar-outline"
+          onPress={() => navigation.navigate('CreateConference')}
+        />
+        <ActionCard
+          title="Nuevo Media & Press"
+          description="Agregar media al portfolio"
+          color="#64D2FF"
+          icon="newspaper-outline"
+          onPress={() => navigation.navigate('CreateMedia')}
+        />
+        <ActionCard
+          title="Nueva Infografía"
+          description="Agregar nueva infografía"
+          color="#30D158"
+          icon="stats-chart-outline"
+          onPress={() => navigation.navigate('CreateInfographic')}
+        />
+        <ActionCard
+          title="Nuevo Talk"
+          description="Agregar nuevo talk"
+          color="#FF375F"
+          icon="podium-outline"
+          onPress={() => navigation.navigate('CreateTalk')}
+        />
+      </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardIcon}>💭</Text>
-          <Text style={styles.cardTitle}>Nueva Quote</Text>
-          <Text style={styles.cardDescription}>Compartir una reflexión</Text>
-        </View>
+      {/* Sección de Gestión */}
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Gestionar Contenido</Text>
+        <Text style={styles.sectionSubtitle}>Editar y administrar contenido existente</Text>
+      </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardIcon}>🎙️</Text>
-          <Text style={styles.cardTitle}>Episodio Podcast</Text>
-          <Text style={styles.cardDescription}>Nuevo episodio del podcast</Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardIcon}>📚</Text>
-          <Text style={styles.cardTitle}>Reseña de Libro</Text>
-          <Text style={styles.cardDescription}>Agregar libro al catálogo</Text>
-        </View>
-
-        <TouchableOpacity style={styles.aiButton}>
-          <Text style={styles.aiIcon}>🤖</Text>
-          <View style={styles.aiContent}>
-            <Text style={styles.aiTitle}>Generar con IA</Text>
-            <Text style={styles.aiDescription}>Usar Gemini para crear contenido</Text>
-          </View>
-        </TouchableOpacity>
+      <View style={styles.actionsGrid}>
+        <ActionCard
+          title="Gestión de Blog Posts"
+          description="Ver, editar y eliminar posts del blog"
+          color="#007AFF"
+          icon="list-outline"
+          onPress={() => navigation.navigate('BlogCRUD')}
+        />
+        <ActionCard
+          title="Gestión de Proyectos"
+          description="Administrar proyectos del portfolio"
+          color="#FF9F0A"
+          icon="briefcase-outline"
+          onPress={() => navigation.navigate('ProjectsCRUD')}
+        />
+        <ActionCard
+          title="Gestión de Quotes"
+          description="Administrar quotes y reflexiones"
+          color="#FF2D92"
+          icon="chatbox-ellipses-outline"
+          onPress={() => navigation.navigate('QuotesCRUD')}
+        />
+        <ActionCard
+          title="Gestión de Podcasts"
+          description="Administrar episodios del podcast"
+          color="#FF3B30"
+          icon="mic-outline"
+          onPress={() => navigation.navigate('PodcastCRUD')}
+        />
+        <ActionCard
+          title="Gestión de Libros"
+          description="Administrar reseñas de libros"
+          color="#5856D6"
+          icon="book-outline"
+          onPress={() => navigation.navigate('BooksCRUD')}
+        />
+        <ActionCard
+          title="Gestión de Conferencias"
+          description="Administrar conferencias"
+          color="#34C759"
+          icon="calendar-outline"
+          onPress={() => navigation.navigate('ConferencesCRUD')}
+        />
+        <ActionCard
+          title="Gestión de Media & Press"
+          description="Administrar media y prensa"
+          color="#64D2FF"
+          icon="newspaper-outline"
+          onPress={() => navigation.navigate('MediaCRUD')}
+        />
+        <ActionCard
+          title="Gestión de Infografías"
+          description="Administrar infografías"
+          color="#30D158"
+          icon="stats-chart-outline"
+          onPress={() => navigation.navigate('InfographicsCRUD')}
+        />
+        <ActionCard
+          title="Gestión de Talks"
+          description="Administrar talks y presentaciones"
+          color="#FF375F"
+          icon="podium-outline"
+          onPress={() => navigation.navigate('TalksCRUD')}
+        />
       </View>
     </ScrollView>
   );
@@ -75,68 +212,70 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.6)',
     fontWeight: '400',
   },
-  content: {
-    gap: 16,
+  sectionHeader: {
+    marginTop: 32,
+    marginBottom: 16,
   },
-  card: {
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.6)',
+  },
+  actionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+    marginLeft: -6,
+    marginRight: -6,
+  },
+  actionCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: 12,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 202, 119, 0.2)',
+    padding: 14,
+    flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 12,
+    marginHorizontal: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     shadowColor: '#00ca77',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
   },
-  cardIcon: {
-    fontSize: 32,
-    marginBottom: 12,
+  iconSquare: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    marginRight: 12,
+  },
+  cardAccent: {
+    position: 'absolute',
+    right: 0,
+    top: 8,
+    bottom: 8,
+    width: 3,
+    borderTopRightRadius: 12,
+    borderBottomRightRadius: 12,
   },
   cardTitle: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '600',
     color: '#FFFFFF',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   cardDescription: {
-    fontSize: 14,
+    fontSize: 13,
     color: 'rgba(255, 255, 255, 0.6)',
-    textAlign: 'center',
-  },
-  aiButton: {
-    backgroundColor: 'rgba(0, 202, 119, 0.15)',
-    borderRadius: 12,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 202, 119, 0.3)',
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 16,
-    shadowColor: '#00ca77',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  aiIcon: {
-    fontSize: 32,
-    marginRight: 16,
-  },
-  aiContent: {
-    flex: 1,
-  },
-  aiTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#00ca77',
-    marginBottom: 4,
-  },
-  aiDescription: {
-    fontSize: 14,
-    color: 'rgba(0, 202, 119, 0.8)',
   },
 });
 

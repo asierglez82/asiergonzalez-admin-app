@@ -1,0 +1,3 @@
+# Directorio creado para evitar errores de Metro bundler
+# Las imágenes de blog están en Firebase Storage, no localmente
+# Este directorio previene errores cuando Metro busca assets de la web app

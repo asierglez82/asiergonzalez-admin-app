@@ -63,41 +63,58 @@ class FirestoreService {
     }
     
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    return querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      // Remover el campo 'id' hardcodeado si existe y usar el ID real del documento
+      const { id: hardcodedId, ...cleanData } = data;
+      return {
+        id: doc.id, // ID real del documento de Firestore
+        ...cleanData
+      };
+    });
   }
 
   // Obtener por ID
   async getById(id) {
-    const docRef = doc(db, this.collectionName, id);
+    // Convertir ID a string para evitar errores de Firestore
+    const stringId = String(id);
+    const docRef = doc(db, this.collectionName, stringId);
     const docSnap = await getDoc(docRef);
     
     if (docSnap.exists()) {
-      return { id: docSnap.id, ...docSnap.data() };
+      const data = docSnap.data();
+      // Remover el campo 'id' hardcodeado si existe y usar el ID real del documento
+      const { id: hardcodedId, ...cleanData } = data;
+      return { 
+        id: docSnap.id, // ID real del documento de Firestore
+        ...cleanData 
+      };
     } else {
-      throw new Error(`Document with id ${id} not found`);
+      throw new Error(`Document with id ${stringId} not found`);
     }
   }
 
   // Actualizar documento
   async update(id, data) {
-    const docRef = doc(db, this.collectionName, id);
+    // Convertir ID a string para evitar errores de Firestore
+    const stringId = String(id);
+    const docRef = doc(db, this.collectionName, stringId);
     const updateData = {
       ...data,
       updatedAt: serverTimestamp()
     };
     
     await updateDoc(docRef, updateData);
-    return { id, ...updateData };
+    return { id: stringId, ...updateData };
   }
 
   // Eliminar documento
   async delete(id) {
-    const docRef = doc(db, this.collectionName, id);
+    // Convertir ID a string para evitar errores de Firestore
+    const stringId = String(id);
+    const docRef = doc(db, this.collectionName, stringId);
     await deleteDoc(docRef);
-    return { success: true, id };
+    return { success: true, id: stringId };
   }
 
   // Buscar documentos
@@ -109,10 +126,15 @@ class FirestoreService {
     );
     
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    return querySnapshot.docs.map(doc => {
+      const data = doc.data();
+      // Remover el campo 'id' hardcodeado si existe y usar el ID real del documento
+      const { id: hardcodedId, ...cleanData } = data;
+      return {
+        id: doc.id, // ID real del documento de Firestore
+        ...cleanData
+      };
+    });
   }
 }
 
