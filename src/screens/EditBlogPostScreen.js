@@ -10,7 +10,8 @@ import {
   Dimensions, 
   Image, 
   ActivityIndicator, 
-  Platform 
+  Platform,
+  Switch
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { blogPostsService } from '../services/firestore';
@@ -25,24 +26,22 @@ const EditBlogPostScreen = ({ navigation, route }) => {
   const [saving, setSaving] = useState(false);
   const [screenData, setScreenData] = useState(Dimensions.get('window'));
   const [post, setPost] = useState(null);
+  const [isDraft, setIsDraft] = useState(true);
   
-  // Form fields
+  // Form fields - actualizados para coincidir con Firebase
   const [formData, setFormData] = useState({
     title: '',
-    subtitle: '',
     author: '',
     date: '',
-    content: '',
     modalContent: '',
     tags: '',
     image: '',
-    modalImage: '',
-    pdfFile: '',
     event: '',
     modal: 'mymodal',
     width: '1200px',
     path: '',
-    url: ''
+    url: '',
+    slug: ''
   });
 
   // Función para cargar datos
@@ -57,21 +56,21 @@ const EditBlogPostScreen = ({ navigation, route }) => {
       setPost(data);
       setFormData({
         title: data.title || '',
-        subtitle: data.subtitle || '',
         author: data.author || '',
         date: data.date || '',
-        content: data.content || '',
         modalContent: data.modalContent || '',
         tags: data.tags || '',
         image: data.image || '',
-        modalImage: data.modalImage || '',
-        pdfFile: data.pdfFile || '',
         event: data.event || '',
         modal: data.modal || 'mymodal',
         width: data.width || '1200px',
         path: data.path || '',
-        url: data.url || ''
+        url: data.url || '',
+        slug: data.slug || ''
       });
+      
+      // Inicializar estado de borrador
+      setIsDraft(data.draft !== false);
       
       console.log('Form data set:', formData);
     } catch (error) {
@@ -127,6 +126,7 @@ const EditBlogPostScreen = ({ navigation, route }) => {
       
       const updateData = {
         ...formData,
+        draft: isDraft,
         updatedAt: new Date()
       };
 
@@ -145,15 +145,30 @@ const EditBlogPostScreen = ({ navigation, route }) => {
     }
   };
 
+  const handleBack = () => {
+    navigation.navigate('BlogCRUD');
+  };
+
   const handleCancel = () => {
-    Alert.alert(
-      'Cancelar edición',
-      '¿Estás seguro de que quieres cancelar? Los cambios no guardados se perderán.',
-      [
-        { text: 'Continuar editando', style: 'cancel' },
-        { text: 'Cancelar', style: 'destructive', onPress: () => navigation.goBack() }
-      ]
-    );
+    // Deshacer cambios - restaurar datos originales
+    if (post) {
+      setFormData({
+        title: post.title || '',
+        author: post.author || '',
+        date: post.date || '',
+        modalContent: post.modalContent || '',
+        tags: post.tags || '',
+        image: post.image || '',
+        event: post.event || '',
+        modal: post.modal || 'mymodal',
+        width: post.width || '1200px',
+        path: post.path || '',
+        url: post.url || '',
+        slug: post.slug || ''
+      });
+      setIsDraft(post.draft !== false);
+    }
+    Alert.alert('Cambios deshechos', 'Se han restaurado los valores originales del post');
   };
 
   console.log('Rendering with formData:', formData);
@@ -179,7 +194,7 @@ const EditBlogPostScreen = ({ navigation, route }) => {
       <View style={[styles.header, isTablet && styles.headerTablet, isMobile && styles.headerMobile]}>
         <TouchableOpacity 
           style={[styles.backButton, isTablet && styles.backButtonTablet, isMobile && styles.backButtonMobile]}
-          onPress={handleCancel}
+          onPress={handleBack}
         >
           <Ionicons name="arrow-back" size={isTablet ? 28 : 24} color="#FFFFFF" />
         </TouchableOpacity>
@@ -191,17 +206,25 @@ const EditBlogPostScreen = ({ navigation, route }) => {
             Modifica los campos del post
           </Text>
         </View>
-        <TouchableOpacity 
-          style={[styles.saveButton, isTablet && styles.saveButtonTablet, isMobile && styles.saveButtonMobile, saving && styles.saveButtonDisabled]}
-          onPress={handleSave}
-          disabled={saving}
-        >
-          {saving ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <Ionicons name="checkmark" size={isTablet ? 28 : 24} color="#FFFFFF" />
-          )}
-        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity 
+            style={[styles.cancelButton, isTablet && styles.cancelButtonTablet, isMobile && styles.cancelButtonMobile]}
+            onPress={handleCancel}
+          >
+            <Ionicons name="arrow-undo" size={isTablet ? 28 : 24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.saveButton, isTablet && styles.saveButtonTablet, isMobile && styles.saveButtonMobile, saving && styles.saveButtonDisabled]}
+            onPress={handleSave}
+            disabled={saving}
+          >
+            {saving ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Ionicons name="checkmark" size={isTablet ? 28 : 24} color="#FFFFFF" />
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={[styles.scrollContent, isTablet && styles.scrollContentTablet, isMobile && styles.scrollContentMobile]}>
@@ -239,7 +262,18 @@ const EditBlogPostScreen = ({ navigation, route }) => {
               style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
               value={formData.date}
               onChangeText={(value) => handleInputChange('date', value)}
-              placeholder="Ej: 6 June 2025"
+              placeholder="Ej: 23 July 2024"
+              placeholderTextColor="rgba(255, 255, 255, 0.5)"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Evento</Text>
+            <TextInput
+              style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
+              value={formData.event}
+              onChangeText={(value) => handleInputChange('event', value)}
+              placeholder="Ej: Web Summit"
               placeholderTextColor="rgba(255, 255, 255, 0.5)"
             />
           </View>
@@ -250,9 +284,35 @@ const EditBlogPostScreen = ({ navigation, route }) => {
               style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
               value={formData.tags}
               onChangeText={(value) => handleInputChange('tags', value)}
-              placeholder="Ej: #tag1 #tag2"
+              placeholder="Ej: #emprendimiento #innovación #liderazgo"
               placeholderTextColor="rgba(255, 255, 255, 0.5)"
             />
+          </View>
+
+          {/* Toggle para borrador/publicado */}
+          <View style={styles.toggleGroup}>
+            <View style={styles.toggleRow}>
+              <Text style={[styles.toggleLabel, isTablet && styles.toggleLabelTablet, isMobile && styles.toggleLabelMobile]}>
+                Estado del Post
+              </Text>
+              <View style={styles.toggleContainer}>
+                <Text style={[styles.toggleText, isDraft && styles.toggleTextActive]}>
+                  Borrador
+                </Text>
+                <Switch
+                  value={!isDraft}
+                  onValueChange={(value) => setIsDraft(!value)}
+                  trackColor={{ false: '#FF9800', true: '#4CAF50' }}
+                  thumbColor={isDraft ? '#FFFFFF' : '#FFFFFF'}
+                />
+                <Text style={[styles.toggleText, !isDraft && styles.toggleTextActive]}>
+                  Publicado
+                </Text>
+              </View>
+            </View>
+            <Text style={[styles.toggleDescription, isTablet && styles.toggleDescriptionTablet, isMobile && styles.toggleDescriptionMobile]}>
+              {isDraft ? 'El post está en borrador y no se muestra en la web' : 'El post está publicado y es visible en la web'}
+            </Text>
           </View>
         </View>
 
@@ -263,28 +323,15 @@ const EditBlogPostScreen = ({ navigation, route }) => {
           </Text>
           
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Contenido breve</Text>
-            <TextInput
-              style={[styles.textArea, isTablet && styles.textAreaTablet, isMobile && styles.textAreaMobile]}
-              value={formData.content}
-              onChangeText={(value) => handleInputChange('content', value)}
-              placeholder="Descripción breve del post"
-              placeholderTextColor="rgba(255, 255, 255, 0.5)"
-              multiline
-              numberOfLines={4}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Contenido modal (HTML)</Text>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Contenido modal (HTML) *</Text>
             <TextInput
               style={[styles.textArea, isTablet && styles.textAreaTablet, isMobile && styles.textAreaMobile]}
               value={formData.modalContent}
               onChangeText={(value) => handleInputChange('modalContent', value)}
-              placeholder="Contenido HTML para el modal"
+              placeholder="Contenido HTML completo del blog post"
               placeholderTextColor="rgba(255, 255, 255, 0.5)"
               multiline
-              numberOfLines={8}
+              numberOfLines={12}
             />
           </View>
         </View>
@@ -301,7 +348,18 @@ const EditBlogPostScreen = ({ navigation, route }) => {
               style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
               value={formData.image}
               onChangeText={(value) => handleInputChange('image', value)}
-              placeholder="URL de la imagen principal"
+              placeholder="Ruta de la imagen principal"
+              placeholderTextColor="rgba(255, 255, 255, 0.5)"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Slug</Text>
+            <TextInput
+              style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
+              value={formData.slug}
+              onChangeText={(value) => handleInputChange('slug', value)}
+              placeholder="Ej: conexiones-que-impulsan-el-futuro-emprendedor"
               placeholderTextColor="rgba(255, 255, 255, 0.5)"
             />
           </View>
@@ -312,7 +370,7 @@ const EditBlogPostScreen = ({ navigation, route }) => {
               style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
               value={formData.path}
               onChangeText={(value) => handleInputChange('path', value)}
-              placeholder="Ej: /blog/mi-post"
+              placeholder="Ej: /blog/conexiones-que-impulsan-el-futuro-emprendedor"
               placeholderTextColor="rgba(255, 255, 255, 0.5)"
             />
           </View>
@@ -323,7 +381,29 @@ const EditBlogPostScreen = ({ navigation, route }) => {
               style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
               value={formData.url}
               onChangeText={(value) => handleInputChange('url', value)}
-              placeholder="https://asiergonzalez.es/blog/mi-post"
+              placeholder="https://asiergonzalez.es/blog/conexiones-que-impulsan-el-futuro-emprendedor"
+              placeholderTextColor="rgba(255, 255, 255, 0.5)"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Modal</Text>
+            <TextInput
+              style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
+              value={formData.modal}
+              onChangeText={(value) => handleInputChange('modal', value)}
+              placeholder="mymodal"
+              placeholderTextColor="rgba(255, 255, 255, 0.5)"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Width</Text>
+            <TextInput
+              style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
+              value={formData.width}
+              onChangeText={(value) => handleInputChange('width', value)}
+              placeholder="1200px"
               placeholderTextColor="rgba(255, 255, 255, 0.5)"
             />
           </View>
@@ -373,6 +453,16 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.6)',
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  cancelButton: {
+    backgroundColor: '#FF9800',
+    borderRadius: 8,
+    padding: 12,
   },
   saveButton: {
     backgroundColor: '#00ca77',
@@ -454,6 +544,10 @@ const styles = StyleSheet.create({
   subtitleTablet: {
     fontSize: 16,
   },
+  cancelButtonTablet: {
+    padding: 16,
+    borderRadius: 12,
+  },
   saveButtonTablet: {
     padding: 16,
     borderRadius: 12,
@@ -505,6 +599,10 @@ const styles = StyleSheet.create({
   subtitleMobile: {
     fontSize: 12,
   },
+  cancelButtonMobile: {
+    padding: 8,
+    borderRadius: 6,
+  },
   saveButtonMobile: {
     padding: 8,
     borderRadius: 6,
@@ -532,6 +630,59 @@ const styles = StyleSheet.create({
     fontSize: 14,
     borderRadius: 6,
     minHeight: 80,
+  },
+
+  // Toggle styles
+  toggleGroup: {
+    marginTop: 20,
+    padding: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  toggleLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  toggleText: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.6)',
+    marginHorizontal: 8,
+  },
+  toggleTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  toggleDescription: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontStyle: 'italic',
+  },
+
+  // Responsive toggle styles
+  toggleLabelTablet: {
+    fontSize: 18,
+  },
+  toggleLabelMobile: {
+    fontSize: 14,
+  },
+  toggleDescriptionTablet: {
+    fontSize: 14,
+  },
+  toggleDescriptionMobile: {
+    fontSize: 11,
   },
 });
 

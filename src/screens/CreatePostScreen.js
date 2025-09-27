@@ -78,6 +78,7 @@ const CreatePostScreen = ({ navigation }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showJsonModal, setShowJsonModal] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [generatingCTA, setGeneratingCTA] = useState(false);
   const [uploadedImagePath, setUploadedImagePath] = useState(null);
   const [aiGeneratedFields, setAiGeneratedFields] = useState(new Set());
   const [isDraft, setIsDraft] = useState(true);
@@ -143,9 +144,12 @@ const CreatePostScreen = ({ navigation }) => {
           notes 
         });
         const result = await generateSmart(prompt);
+        console.log('Raw AI response (auto):', result);
         
         try {
-          const parsed = JSON.parse(result);
+          const cleanedResponse = cleanAIResponse(result);
+          console.log('Cleaned AI response (auto):', cleanedResponse);
+          const parsed = JSON.parse(cleanedResponse);
           
           // Rellenar campos vacíos con la IA
           if (!location && parsed.location) setLocation(parsed.location);
@@ -169,7 +173,9 @@ const CreatePostScreen = ({ navigation }) => {
           }
           
         } catch (parseError) {
-          console.warn('Error parsing AI response:', parseError);
+          console.error('Error parsing AI response (auto):', parseError);
+          console.error('Raw response was:', result);
+          console.error('Cleaned response was:', cleanedResponse);
           // Fallback a generación local solo para campos vacíos
           generateLocalContentForEmptyFields();
         }
@@ -213,7 +219,7 @@ const CreatePostScreen = ({ navigation }) => {
 
   const handleGenerateCTA = async () => {
     try {
-      setGenerating(true);
+      setGeneratingCTA(true);
       
       // Prompt simple solo para generar frase
       const prompt = `Genera una frase inspiradora y profesional para un post de Asier González (emprendedor y speaker).
@@ -244,8 +250,30 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
       setCta(generated);
       setPhrase(generated);
     } finally {
-      setGenerating(false);
+      setGeneratingCTA(false);
     }
+  };
+
+  // Función para limpiar la respuesta de la IA y extraer JSON
+  const cleanAIResponse = (response) => {
+    // Buscar JSON en la respuesta, puede estar envuelto en markdown
+    const jsonMatch = response.match(/```json\s*([\s\S]*?)\s*```/) || 
+                     response.match(/```\s*([\s\S]*?)\s*```/) ||
+                     response.match(/\{[\s\S]*\}/);
+    
+    if (jsonMatch) {
+      return jsonMatch[1].trim();
+    }
+    
+    // Si no encuentra bloques de código, buscar JSON directo
+    const jsonStart = response.indexOf('{');
+    const jsonEnd = response.lastIndexOf('}');
+    
+    if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+      return response.substring(jsonStart, jsonEnd + 1);
+    }
+    
+    return response;
   };
 
   const handleGenerateContents = async () => {
@@ -254,19 +282,23 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
       // Intentar generación completa con IA
       try {
         const prompt = buildComprehensivePrompt({ 
-          imageUrl, 
+          imageUrl: image, 
           language, 
-          notes 
+          notes,
+          location,
+          date: blogDate,
+          event,
+          people
         });
         const result = await generateSmart(prompt);
+        console.log('Raw AI response:', result);
         
         try {
-          const parsed = JSON.parse(result);
+          const cleanedResponse = cleanAIResponse(result);
+          console.log('Cleaned AI response:', cleanedResponse);
+          const parsed = JSON.parse(cleanedResponse);
           
-          // Rellenar todos los campos con la IA
-          if (parsed.location) setLocation(parsed.location);
-          if (parsed.event) setEvent(parsed.event);
-          if (parsed.people) setPeople(parsed.people);
+          // Rellenar campos de contenido con la IA (no sobrescribir campos de entrada)
           if (parsed.phrase) setPhrase(parsed.phrase);
           if (parsed.webText) setWebText(parsed.webText);
           if (parsed.cta) setCta(parsed.cta);
@@ -278,7 +310,7 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
           if (parsed.blogDate) { setBlogDate(parsed.blogDate); generatedFields.add('blogDate'); }
           if (parsed.modalContent) { setModalContent(parsed.modalContent); generatedFields.add('modalContent'); }
           if (parsed.tags) { setTags(parsed.tags); generatedFields.add('tags'); }
-          if (parsed.image) { setImage(parsed.image); generatedFields.add('image'); }
+          // No sobrescribir la imagen - será la composición generada automáticamente
           if (parsed.modal) { setModal(parsed.modal); generatedFields.add('modal'); }
           if (parsed.width) { setWidth(parsed.width); generatedFields.add('width'); }
           if (parsed.path) { setPath(parsed.path); generatedFields.add('path'); }
@@ -302,7 +334,14 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
           }
           
         } catch (parseError) {
-          console.warn('Error parsing AI response:', parseError);
+          console.error('Error parsing AI response:', parseError);
+          console.error('Raw response was:', result);
+          console.error('Cleaned response was:', cleanedResponse);
+          Alert.alert(
+            'Error de IA', 
+            'No se pudo procesar la respuesta de la IA. Se generará contenido básico.',
+            [{ text: 'OK' }]
+          );
           // Fallback a generación local si no se puede parsear
           generateLocalContent();
         }
@@ -421,6 +460,28 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
 
       let finalImageUrl = image; // Usar la imagen actual por defecto
 
+      // Borrar imagen anterior si existe y es de Firebase Storage
+      if (image && image.includes('firebasestorage.googleapis.com')) {
+        try {
+          console.log('Borrando imagen anterior...');
+          const urlParts = image.split('/o/');
+          if (urlParts.length > 1) {
+            const pathWithParams = urlParts[1].split('?')[0];
+            const storagePath = decodeURIComponent(pathWithParams);
+            
+            const deleteResult = await storageService.deleteImage(storagePath);
+            if (deleteResult.success) {
+              console.log('Imagen anterior borrada correctamente');
+            } else {
+              console.warn('No se pudo borrar la imagen anterior:', deleteResult.error);
+            }
+          }
+        } catch (deleteError) {
+          console.warn('Error borrando imagen anterior:', deleteError);
+          // Continuar aunque falle el borrado
+        }
+      }
+
       // Si hay una composición generada, capturar y subir la imagen automáticamente
       if (composeRef.current) {
         try {
@@ -429,18 +490,24 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
           let imageData;
           
           if (Platform.OS === 'web') {
-            // Para web, usar html2canvas
-            const canvas = await html2canvas(composeRef.current, {
-              backgroundColor: '#00ca77',
-              scale: 2, // Mayor resolución
-              useCORS: true,
-              allowTaint: true
+            // Para web, usar dom-to-image
+            const dataUrl = await domtoimage.toPng(composeRef.current, {
+              quality: 1.0,
+              bgcolor: '#00ca77',
+              width: composeRef.current.offsetWidth,
+              height: composeRef.current.offsetHeight,
+              style: {
+                transform: 'translate(0, 0)',
+                transformOrigin: 'top left',
+                position: 'relative',
+                left: '0px',
+                top: '0px',
+                margin: '0',
+                padding: '0'
+              }
             });
             
-            // Convertir canvas a blob
-            imageData = await new Promise(resolve => {
-              canvas.toBlob(resolve, 'image/png', 0.9);
-            });
+            imageData = dataUrl;
           } else {
             // Para móvil, usar ViewShot
             const uri = await captureRef(composeRef, {
@@ -452,16 +519,29 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
           }
 
           // Subir imagen a Firebase Storage
-          const uploadResult = await storageService.uploadImage(imageData, 'blog-compositions');
-          
-          if (uploadResult.success) {
-            finalImageUrl = uploadResult.url;
-            setImage(uploadResult.url);
-            setUploadedImagePath(uploadResult.path);
-            console.log('Imagen subida automáticamente:', uploadResult.url);
-          } else {
-            console.warn('Error subiendo imagen automáticamente:', uploadResult.error);
-            // Continuar con la imagen actual si falla la subida
+          try {
+            const uploadResult = await storageService.uploadImage(imageData, 'blog-images');
+            
+            if (uploadResult.success) {
+              finalImageUrl = uploadResult.url;
+              setImage(uploadResult.url);
+              setUploadedImagePath(uploadResult.path);
+              console.log('Imagen subida automáticamente:', uploadResult.url);
+            } else {
+              console.warn('Error subiendo imagen automáticamente:', uploadResult.error);
+              Alert.alert(
+                'Error de permisos', 
+                'No se pudo subir la imagen automáticamente. Por favor, sube la imagen manualmente o contacta al administrador para configurar los permisos de Firebase Storage.',
+                [{ text: 'OK' }]
+              );
+            }
+          } catch (uploadError) {
+            console.warn('Error subiendo imagen automáticamente:', uploadError);
+            Alert.alert(
+              'Error de permisos', 
+              'No se pudo subir la imagen automáticamente. Por favor, sube la imagen manualmente o contacta al administrador para configurar los permisos de Firebase Storage.',
+              [{ text: 'OK' }]
+            );
           }
         } catch (imageError) {
           console.warn('Error capturando imagen automáticamente:', imageError);
@@ -492,7 +572,10 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
       Alert.alert(
         'Borrador guardado', 
         'El blog post se ha guardado como borrador con imagen incluida',
-        [{ text: 'OK' }]
+        [{ 
+          text: 'OK', 
+          onPress: () => navigation.navigate('BlogCRUD')
+        }]
       );
     } catch (error) {
       console.error(error);
@@ -512,6 +595,28 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
 
       let finalImageUrl = image; // Usar la imagen actual por defecto
 
+      // Borrar imagen anterior si existe y es de Firebase Storage
+      if (image && image.includes('firebasestorage.googleapis.com')) {
+        try {
+          console.log('Borrando imagen anterior...');
+          const urlParts = image.split('/o/');
+          if (urlParts.length > 1) {
+            const pathWithParams = urlParts[1].split('?')[0];
+            const storagePath = decodeURIComponent(pathWithParams);
+            
+            const deleteResult = await storageService.deleteImage(storagePath);
+            if (deleteResult.success) {
+              console.log('Imagen anterior borrada correctamente');
+            } else {
+              console.warn('No se pudo borrar la imagen anterior:', deleteResult.error);
+            }
+          }
+        } catch (deleteError) {
+          console.warn('Error borrando imagen anterior:', deleteError);
+          // Continuar aunque falle el borrado
+        }
+      }
+
       // Si hay una composición generada, capturar y subir la imagen automáticamente
       if (composeRef.current) {
         try {
@@ -520,18 +625,24 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
           let imageData;
           
           if (Platform.OS === 'web') {
-            // Para web, usar html2canvas
-            const canvas = await html2canvas(composeRef.current, {
-              backgroundColor: '#00ca77',
-              scale: 2, // Mayor resolución
-              useCORS: true,
-              allowTaint: true
+            // Para web, usar dom-to-image
+            const dataUrl = await domtoimage.toPng(composeRef.current, {
+              quality: 1.0,
+              bgcolor: '#00ca77',
+              width: composeRef.current.offsetWidth,
+              height: composeRef.current.offsetHeight,
+              style: {
+                transform: 'translate(0, 0)',
+                transformOrigin: 'top left',
+                position: 'relative',
+                left: '0px',
+                top: '0px',
+                margin: '0',
+                padding: '0'
+              }
             });
             
-            // Convertir canvas a blob
-            imageData = await new Promise(resolve => {
-              canvas.toBlob(resolve, 'image/png', 0.9);
-            });
+            imageData = dataUrl;
           } else {
             // Para móvil, usar ViewShot
             const uri = await captureRef(composeRef, {
@@ -543,16 +654,29 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
           }
 
           // Subir imagen a Firebase Storage
-          const uploadResult = await storageService.uploadImage(imageData, 'blog-compositions');
-          
-          if (uploadResult.success) {
-            finalImageUrl = uploadResult.url;
-            setImage(uploadResult.url);
-            setUploadedImagePath(uploadResult.path);
-            console.log('Imagen subida automáticamente:', uploadResult.url);
-          } else {
-            console.warn('Error subiendo imagen automáticamente:', uploadResult.error);
-            // Continuar con la imagen actual si falla la subida
+          try {
+            const uploadResult = await storageService.uploadImage(imageData, 'blog-images');
+            
+            if (uploadResult.success) {
+              finalImageUrl = uploadResult.url;
+              setImage(uploadResult.url);
+              setUploadedImagePath(uploadResult.path);
+              console.log('Imagen subida automáticamente:', uploadResult.url);
+            } else {
+              console.warn('Error subiendo imagen automáticamente:', uploadResult.error);
+              Alert.alert(
+                'Error de permisos', 
+                'No se pudo subir la imagen automáticamente. Por favor, sube la imagen manualmente o contacta al administrador para configurar los permisos de Firebase Storage.',
+                [{ text: 'OK' }]
+              );
+            }
+          } catch (uploadError) {
+            console.warn('Error subiendo imagen automáticamente:', uploadError);
+            Alert.alert(
+              'Error de permisos', 
+              'No se pudo subir la imagen automáticamente. Por favor, sube la imagen manualmente o contacta al administrador para configurar los permisos de Firebase Storage.',
+              [{ text: 'OK' }]
+            );
           }
         } catch (imageError) {
           console.warn('Error capturando imagen automáticamente:', imageError);
@@ -768,17 +892,17 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
           </View>
           <Text style={styles.label}>Frase</Text>
           <TouchableOpacity 
-            style={[styles.aiBtn, generating && styles.aiBtnDisabled]} 
+            style={[styles.aiBtn, generatingCTA && styles.aiBtnDisabled]} 
             onPress={handleGenerateCTA}
-            disabled={generating}
+            disabled={generatingCTA}
           >
-            {generating ? (
+            {generatingCTA ? (
               <ActivityIndicator size="small" color="#30D158" />
             ) : (
               <Ionicons name="sparkles-outline" size={16} color="#30D158" />
             )}
             <Text style={styles.aiBtnText}>
-              {generating ? 'Generando...' : 'IA CTA'}
+              {generatingCTA ? 'Generando...' : 'IA CTA'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -817,6 +941,23 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
                 transform: 'translate(0, 0)'
               }}
             >
+              <div style={{
+                backgroundColor: '#2c3e50',
+                padding: isTablet ? '15px 30px' : isMobile ? '10px 20px' : '20px 40px',
+                borderRadius: isTablet ? '8px' : isMobile ? '6px' : '12px',
+                position: 'absolute',
+                top: isTablet ? '630px' : isMobile ? '480px' : '930px',
+                right: isTablet ? '40px' : isMobile ? '20px' : '60px',
+                zIndex: 10
+              }}>
+                <span style={{
+                  color: '#FFFFFF',
+                  fontSize: isTablet ? '18px' : isMobile ? '12px' : '24px',
+                  fontWeight: '700',
+                  letterSpacing: isTablet ? '2px' : isMobile ? '1px' : '3px',
+                  fontFamily: 'Satoshi, -apple-system, BlinkMacSystemFont, sans-serif'
+                }}>ASIER GONZALEZ</span>
+              </div>
               <div style={{
                 backgroundColor: '#FFFFFF',
                 borderRadius: isTablet ? '15px' : isMobile ? '10px' : '20px',
@@ -955,22 +1096,6 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
                 </div>
               </div>
               <div style={{
-                backgroundColor: '#2c3e50',
-                padding: isTablet ? '15px 30px' : isMobile ? '10px 20px' : '20px 40px',
-                borderRadius: isTablet ? '8px' : isMobile ? '6px' : '12px',
-                marginBottom: isTablet ? '24px' : isMobile ? '16px' : '32px',
-                alignSelf: 'flex-end',
-                marginRight: isTablet ? '40px' : isMobile ? '20px' : '60px'
-              }}>
-                <span style={{
-                  color: '#FFFFFF',
-                  fontSize: isTablet ? '18px' : isMobile ? '12px' : '24px',
-                  fontWeight: '700',
-                  letterSpacing: isTablet ? '2px' : isMobile ? '1px' : '3px',
-                  fontFamily: 'Satoshi, -apple-system, BlinkMacSystemFont, sans-serif'
-                }}>ASIER GONZALEZ</span>
-              </div>
-              <div style={{
                 color: '#333B4D',
                 fontSize: isTablet ? '28px' : isMobile ? '18px' : '40px',
                 fontWeight: '300',
@@ -978,7 +1103,7 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
                 fontStyle: 'italic',
                 textAlign: 'center',
                 lineHeight: isTablet ? '34px' : isMobile ? '22px' : '48px',
-                marginTop: isTablet ? '40px' : isMobile ? '20px' : '60px'
+                marginTop: isTablet ? '0px' : isMobile ? '-10px' : '10px'
               }}>"{phrase}"</div>
             </div>
           ) : (
@@ -1033,124 +1158,11 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
               </View>
             </ViewShot>
           )}
-          <View style={styles.previewButtons}>
-            <TouchableOpacity style={styles.secondaryBtn} onPress={async () => {
-              try {
-                setExporting(true);
-                console.log('Iniciando exportación...');
-                
-                if (Platform.OS === 'web') {
-                  // Para web, usamos dom-to-image
-                  try {
-                    console.log('Usando dom-to-image para web...');
-                    const element = composeRef.current;
-                    if (!element) {
-                      Alert.alert('Error', 'No se puede acceder al elemento para exportar');
-                      return;
-                    }
-                    
-                    // Esperar a que las imágenes se carguen completamente
-                    const images = element.querySelectorAll('img');
-                    await Promise.all(Array.from(images).map(img => {
-                      return new Promise((resolve) => {
-                        if (img.complete) {
-                          resolve();
-                        } else {
-                          img.onload = resolve;
-                          img.onerror = resolve;
-                        }
-                      });
-                    }));
-                    
-                    // Esperar un momento adicional para que el elemento se renderice completamente
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                    
-                    console.log('Elemento encontrado:', element);
-                    console.log('Dimensiones del elemento:', element.offsetWidth, 'x', element.offsetHeight);
-                    
-                    // Usar dom-to-image con configuración específica
-                    const dataUrl = await domtoimage.toPng(element, {
-                      quality: 1.0,
-                      bgcolor: '#00ca77',
-                      width: element.offsetWidth,
-                      height: element.offsetHeight,
-                      filter: (node) => {
-                        // Incluir todos los elementos
-                        return true;
-                      },
-                      style: {
-                        transform: 'translate(0, 0)',
-                        transformOrigin: 'top left',
-                        position: 'relative',
-                        left: '0px',
-                        top: '0px',
-                        margin: '0',
-                        padding: '0'
-                      }
-                    });
-                    
-                    console.log('Data URL generada:', dataUrl.substring(0, 100) + '...');
-                    
-                    // Crear un enlace de descarga
-                    const link = document.createElement('a');
-                    link.download = `post_${Date.now()}.png`;
-                    link.href = dataUrl;
-                    link.click();
-                    
-                    Alert.alert('Éxito', 'Imagen descargada correctamente');
-                  } catch (error) {
-                    console.error('Error con dom-to-image:', error);
-                    Alert.alert('Error', 'No se pudo exportar la imagen. Intenta hacer una captura de pantalla manual.');
-                  }
-                  return;
-                }
-                
-                // Esperar un momento para que el componente se renderice completamente
-                await new Promise(resolve => setTimeout(resolve, 500));
-                
-                if (!composeRef.current) {
-                  Alert.alert('Error', 'No se puede acceder al componente para exportar. Asegúrate de que el preview esté visible.');
-                  return;
-                }
-                
-                console.log('Capturando imagen...');
-                const uri = await captureRef(composeRef, { 
-                  format: 'png', 
-                  quality: 1,
-                  result: 'base64'
-                });
-                console.log('URI generada:', uri);
-                
-                if (!uri) {
-                  Alert.alert('Error', 'No se pudo generar la imagen');
-                  return;
-                }
-                
-                const dest = FileSystem.cacheDirectory + `post_${Date.now()}.png`;
-                await FileSystem.copyAsync({ from: uri, to: dest });
-                console.log('Archivo guardado en:', dest);
-                
-                if (await Sharing.isAvailableAsync()) {
-                  await Sharing.shareAsync(dest);
-                } else {
-                  Alert.alert('Imagen generada', `Archivo guardado en: ${dest}`);
-                }
-              } catch (e) {
-                console.error('Error en exportación:', e);
-                Alert.alert('Error exportando', `Error: ${e.message}`);
-              } finally {
-                setExporting(false);
-              }
-            }}>
-              <Ionicons name="download-outline" size={16} color="#FFFFFF" />
-              <Text style={styles.secondaryBtnText}>{exporting ? 'Exportando...' : 'Exportar imagen'}</Text>
-            </TouchableOpacity>
-          </View>
         </View>
       )}
 
       {/* Toggles generación */}
-      <View style={styles.fieldCard}>
+      <View style={[styles.fieldCard, { marginTop: 24 }]}>
         <View style={[styles.iconSquare, { backgroundColor: '#A2845E20', borderColor: '#A2845E' }]}>
           <Ionicons name="options-outline" size={18} color="#A2845E" />
         </View>
@@ -2091,28 +2103,27 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     textAlign: 'center',
     lineHeight: 44,
-    marginTop: 60,
+    marginTop: 10,
   },
   composePhraseTablet: {
     fontSize: 28,
     lineHeight: 34,
-    marginTop: 40,
+    marginTop: 0,
   },
   composePhraseMobile: {
     fontSize: 18,
     lineHeight: 22,
-    marginTop: 20,
+    marginTop: -10,
   },
   composeButton: {
     backgroundColor: '#2c3e50',
     paddingHorizontal: 32,
     paddingVertical: 16,
     borderRadius: 8,
-    marginBottom: 24,
     position: 'absolute',
     right: 60,
-    top: '80%',
-    transform: [{ translateY: -50 }],
+    top: 930,
+    zIndex: 10,
   },
   composeButtonTablet: {
     paddingHorizontal: 24,

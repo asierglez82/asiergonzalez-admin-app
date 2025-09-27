@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Dimensions, Image, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Dimensions, Image, ActivityIndicator, Platform, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { blogPostsService } from '../services/firestore';
 import { storageService } from '../services/storage';
@@ -12,6 +12,8 @@ const BlogCRUDScreen = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredBlogPosts, setFilteredBlogPosts] = useState([]);
   const [screenData, setScreenData] = useState(Dimensions.get('window'));
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [postToDelete, setPostToDelete] = useState(null);
 
   useEffect(() => {
     loadBlogPosts();
@@ -60,35 +62,51 @@ const BlogCRUDScreen = ({ navigation }) => {
 
     const filtered = blogPosts.filter(post => 
       post.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.subtitle?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      post.author?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       post.tags?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.content?.toLowerCase().includes(searchQuery.toLowerCase())
+      post.event?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      post.modalContent?.toLowerCase().includes(searchQuery.toLowerCase())
     );
     setFilteredBlogPosts(filtered);
   };
 
   const handleDelete = (postId) => {
-    Alert.alert(
-      'Confirmar eliminación',
-      '¿Estás seguro de que quieres eliminar este post del blog?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Eliminar', 
-          style: 'destructive',
-          onPress: () => deleteBlogPost(postId)
-        }
-      ]
-    );
+    console.log('handleDelete called with postId:', postId);
+    console.log('postId type:', typeof postId);
+    
+    const post = blogPosts.find(p => p.id === postId);
+    setPostToDelete(post);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = () => {
+    if (postToDelete) {
+      console.log('User confirmed deletion, calling deleteBlogPost with:', postToDelete.id);
+      deleteBlogPost(postToDelete.id);
+      setShowDeleteModal(false);
+      setPostToDelete(null);
+    }
+  };
+
+  const cancelDelete = () => {
+    console.log('User cancelled deletion');
+    setShowDeleteModal(false);
+    setPostToDelete(null);
   };
 
   const deleteBlogPost = async (postId) => {
     try {
+      console.log('deleteBlogPost called with postId:', postId);
+      console.log('Current blogPosts length:', blogPosts.length);
+      
       // Obtener información del post antes de borrarlo
       const postToDelete = blogPosts.find(p => p.id === postId);
+      console.log('postToDelete found:', postToDelete);
       
       // Borrar el post de Firestore
-      await blogPostsService.delete(postId);
+      console.log('Calling blogPostsService.delete with:', postId);
+      const deleteResult = await blogPostsService.delete(postId);
+      console.log('blogPostsService.delete result:', deleteResult);
       
       // Si el post tiene una imagen subida a Firebase Storage, borrarla también
       if (postToDelete?.image) {
@@ -186,12 +204,12 @@ const BlogCRUDScreen = ({ navigation }) => {
             styles.blogPostSubtitle,
             isTablet && styles.blogPostSubtitleTablet,
             isMobile && styles.blogPostSubtitleMobile
-          ]} numberOfLines={1}>{post.subtitle}</Text>
+          ]} numberOfLines={1}>{post.author}</Text>
           <Text style={[
             styles.blogPostContentText,
             isTablet && styles.blogPostContentTextTablet,
             isMobile && styles.blogPostContentTextMobile
-          ]} numberOfLines={isTablet ? 3 : 2}>{post.content}</Text>
+          ]} numberOfLines={isTablet ? 3 : 2}>{post.event || 'Sin evento'}</Text>
           <Text style={[
             styles.blogPostTags,
             isTablet && styles.blogPostTagsTablet,
@@ -232,7 +250,11 @@ const BlogCRUDScreen = ({ navigation }) => {
               isTablet && styles.actionButtonTablet,
               isMobile && styles.actionButtonMobile
             ]}
-            onPress={() => handleDelete(post.id)}
+            onPress={() => {
+              console.log('Delete button pressed for post:', post);
+              console.log('Post ID:', post.id);
+              handleDelete(post.id);
+            }}
           >
             <Ionicons name="trash-outline" size={isTablet ? 20 : 16} color="#FF3B30" />
           </TouchableOpacity>
@@ -358,6 +380,98 @@ const BlogCRUDScreen = ({ navigation }) => {
           ))
         )}
       </View>
+
+      {/* Modal de confirmación de eliminación */}
+      <Modal
+        visible={showDeleteModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={cancelDelete}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[
+            styles.modalContainer,
+            isTablet && styles.modalContainerTablet,
+            isMobile && styles.modalContainerMobile
+          ]}>
+            <View style={styles.modalHeader}>
+              <Ionicons name="warning" size={isTablet ? 32 : 24} color="#FF3B30" />
+              <Text style={[
+                styles.modalTitle,
+                isTablet && styles.modalTitleTablet,
+                isMobile && styles.modalTitleMobile
+              ]}>
+                Confirmar eliminación
+              </Text>
+            </View>
+            
+            <Text style={[
+              styles.modalMessage,
+              isTablet && styles.modalMessageTablet,
+              isMobile && styles.modalMessageMobile
+            ]}>
+              ¿Estás seguro de que quieres eliminar este post del blog?
+            </Text>
+            
+            {postToDelete && (
+              <View style={styles.modalPostInfo}>
+                <Text style={[
+                  styles.modalPostTitle,
+                  isTablet && styles.modalPostTitleTablet,
+                  isMobile && styles.modalPostTitleMobile
+                ]} numberOfLines={2}>
+                  {postToDelete.title}
+                </Text>
+                <Text style={[
+                  styles.modalPostAuthor,
+                  isTablet && styles.modalPostAuthorTablet,
+                  isMobile && styles.modalPostAuthorMobile
+                ]}>
+                  {postToDelete.author}
+                </Text>
+              </View>
+            )}
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={[
+                  styles.modalButton,
+                  styles.cancelModalButton,
+                  isTablet && styles.modalButtonTablet,
+                  isMobile && styles.modalButtonMobile
+                ]}
+                onPress={cancelDelete}
+              >
+                <Text style={[
+                  styles.cancelModalButtonText,
+                  isTablet && styles.modalButtonTextTablet,
+                  isMobile && styles.modalButtonTextMobile
+                ]}>
+                  Cancelar
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[
+                  styles.modalButton,
+                  styles.deleteModalButton,
+                  isTablet && styles.modalButtonTablet,
+                  isMobile && styles.modalButtonMobile
+                ]}
+                onPress={confirmDelete}
+              >
+                <Text style={[
+                  styles.deleteModalButtonText,
+                  isTablet && styles.modalButtonTextTablet,
+                  isMobile && styles.modalButtonTextMobile
+                ]}>
+                  Eliminar
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 };
@@ -752,6 +866,141 @@ const styles = StyleSheet.create({
   emptyDescriptionMobile: {
     fontSize: 12,
     lineHeight: 16,
+  },
+
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    backgroundColor: '#2c3e50',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginLeft: 12,
+  },
+  modalMessage: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  modalPostInfo: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 20,
+  },
+  modalPostTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  modalPostAuthor: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.6)',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelModalButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  deleteModalButton: {
+    backgroundColor: '#FF3B30',
+  },
+  cancelModalButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  deleteModalButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
+  // Responsive modal styles
+  modalContainerTablet: {
+    padding: 32,
+    maxWidth: 500,
+    borderRadius: 20,
+  },
+  modalTitleTablet: {
+    fontSize: 24,
+  },
+  modalMessageTablet: {
+    fontSize: 18,
+    lineHeight: 26,
+  },
+  modalPostTitleTablet: {
+    fontSize: 16,
+  },
+  modalPostAuthorTablet: {
+    fontSize: 14,
+  },
+  modalButtonTablet: {
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+  },
+  modalButtonTextTablet: {
+    fontSize: 18,
+  },
+
+  modalContainerMobile: {
+    padding: 20,
+    maxWidth: 350,
+    borderRadius: 12,
+  },
+  modalTitleMobile: {
+    fontSize: 18,
+  },
+  modalMessageMobile: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  modalPostTitleMobile: {
+    fontSize: 13,
+  },
+  modalPostAuthorMobile: {
+    fontSize: 11,
+  },
+  modalButtonMobile: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+  },
+  modalButtonTextMobile: {
+    fontSize: 14,
   },
 });
 

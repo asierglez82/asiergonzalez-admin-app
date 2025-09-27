@@ -1,6 +1,7 @@
 import { 
   ref, 
   uploadBytes, 
+  uploadString,
   getDownloadURL, 
   deleteObject 
 } from 'firebase/storage';
@@ -23,20 +24,22 @@ class StorageService {
       // Crear referencia al archivo
       const imageRef = ref(this.storage, fullPath);
       
-      // Convertir blob a bytes si es necesario
-      let fileData;
-      if (file instanceof Blob) {
-        fileData = file;
+      let snapshot;
+      
+      if (typeof file === 'string' && file.startsWith('data:')) {
+        // Si es una data URL (base64), usar uploadString
+        snapshot = await uploadString(imageRef, file, 'data_url');
+      } else if (file instanceof Blob) {
+        // Si es un blob, usar uploadBytes
+        snapshot = await uploadBytes(imageRef, file);
       } else if (typeof file === 'string') {
-        // Si es una URL, convertir a blob
+        // Si es una URL, convertir a blob primero
         const response = await fetch(file);
-        fileData = await response.blob();
+        const blob = await response.blob();
+        snapshot = await uploadBytes(imageRef, blob);
       } else {
         throw new Error('Formato de archivo no soportado');
       }
-      
-      // Subir archivo
-      const snapshot = await uploadBytes(imageRef, fileData);
       
       // Obtener URL de descarga
       const downloadURL = await getDownloadURL(snapshot.ref);

@@ -24,10 +24,10 @@ export async function generateWithGemini(prompt, system = '') {
 
 export function buildPrompt({ imageUrl, location, date, event, people, language, notes, phrase }) {
   const ppl = people ? people.split(',').map(p => p.trim()).filter(Boolean).join(', ') : 'N/A';
-  return `Idioma: ${language}\n\nFoto: ${imageUrl}\nLocalización: ${location}\nFecha: ${date}\nEvento: ${event}\nPersonas: ${ppl}\n\nNotas: ${notes}\n\nFrase actual: ${phrase}\n\nTareas:\n1) Reescribe la frase (misma intención, 1-2 líneas).\n2) Escribe un texto breve para la web (70-120 palabras).\n3) Devuelve un JSON con: { phrase, webText, cta, hashtags }.`;
+  return `Idioma: ${language}\n\nFoto: ${imageUrl}\nLocalización: ${location}\nFecha: ${date}\nEvento: ${event}\nPersonas: ${ppl}\n\nNotas: ${notes}\n\nFrase actual: ${phrase}\n\nTareas:\n1) Reescribe la frase (misma intención, 1-2 líneas).\n2) Escribe un texto breve para la web (70-120 palabras).\n3) Devuelve un JSON con: { phrase, webText, cta, hashtags } (máximo 2 hashtags).`;
 }
 
-export function buildComprehensivePrompt({ imageUrl, language, notes }) {
+export function buildComprehensivePrompt({ imageUrl, language, notes, location, date, event, people }) {
   const languageInstructions = {
     es: {
       system: "Eres un asistente de marketing digital especializado en crear contenido para redes sociales y web. Genera contenido profesional y atractivo en español.",
@@ -71,44 +71,45 @@ export function buildComprehensivePrompt({ imageUrl, language, notes }) {
 
   return `${instructions.system}
 
-Basándote en la imagen proporcionada y las notas, genera contenido completo para un post de Asier González (emprendedor y speaker).
+Basándote en la información proporcionada, genera contenido completo para un post de Asier González (emprendedor y speaker).
 
-IMAGEN: ${imageUrl || 'No proporcionada'}
-IDIOMA: ${language}
-NOTAS: ${notes || 'Ninguna'}
+IMPORTANTE: No uses emojis en el contenido generado, solo texto profesional.
 
-Genera el siguiente contenido:
+INFORMACIÓN DISPONIBLE:
+→ IMAGEN: ${imageUrl || 'No proporcionada'}
+→ IDIOMA: ${language}
+→ LOCALIZACIÓN: ${location || 'No especificada'}
+→ FECHA: ${date || 'No especificada'}
+→ EVENTO: ${event || 'No especificado'}
+→ PERSONAS: ${people || 'No especificadas'}
+→ NOTAS: ${notes || 'Ninguna'}
 
-1. LOCALIZACIÓN: ${instructions.location} (ej: "Madrid, España", "San Francisco, USA")
-2. EVENTO: ${instructions.event} (ej: "South Summit", "Web Summit", "TechCrunch Disrupt")
-3. PERSONAS: ${instructions.people} (ej: "María García, Carlos López, Ana Martín")
-4. FRASE PRINCIPAL: ${instructions.phrase} (1-2 líneas, inspiradora y profesional)
-5. TEXTO WEB: ${instructions.webText} (70-120 palabras, expande la frase principal)
-6. CTA: ${instructions.cta} (invita a la conversación)
+Genera el siguiente contenido basándote en la información proporcionada:
+
+1. FRASE PRINCIPAL: ${instructions.phrase} (1-2 líneas, inspiradora y profesional)
+2. TEXTO WEB: ${instructions.webText} (70-120 palabras, expande la frase principal)
+3. CTA: ${instructions.cta} (invita a la conversación)
 
 CAMPOS DEL BLOG POST:
-7. TÍTULO: Un título atractivo para el blog post (máximo 60 caracteres)
-8. AUTOR: "Asier González" (siempre este valor)
-9. FECHA: Fecha actual en formato "DD Month YYYY" (ej: "15 January 2024")
-10. CONTENIDO MODAL: Contenido HTML completo del blog post (500-1000 palabras)
-11. TAGS: Hashtags relevantes separados por espacios (ej: "#startup #innovación #leadership")
-12. IMAGEN: Ruta de imagen del blog (ej: "/assets/img/blog/titulo-del-post.png")
-13. MODAL: "mymodal" (siempre este valor)
-14. WIDTH: "1200px" (siempre este valor)
-15. PATH: Ruta del blog post (ej: "/blog/titulo-del-post")
-16. URL: URL completa del blog post (ej: "https://asiergonzalez.es/blog/titulo-del-post")
-17. SLUG: Slug del blog post (ej: "titulo-del-post")
+4. TÍTULO: Un título atractivo para el blog post (máximo 60 caracteres)
+5. AUTOR: "Asier González" (siempre este valor)
+6. FECHA: Usa la fecha proporcionada: "${date || 'Fecha no especificada'}"
+7. CONTENIDO MODAL: Contenido HTML completo del blog post (500-1000 palabras)
+8. TAGS: Máximo 2 hashtags relevantes separados por espacios (ej: "#startup #innovación")
+9. IMAGEN: La imagen será la composición generada automáticamente
+10. MODAL: "mymodal" (siempre este valor)
+11. WIDTH: "1200px" (siempre este valor)
+12. PATH: Ruta del blog post (ej: "/blog/titulo-del-post")
+13. URL: URL completa del blog post (ej: "https://asiergonzalez.es/blog/titulo-del-post")
+14. SLUG: Slug del blog post (ej: "titulo-del-post")
 
 Para cada red social, adapta el contenido:
-- LinkedIn: Profesional, con hashtags relevantes (#startup #innovación #leadership)
-- Instagram: Más visual, con hashtags (#startup #buildinpublic #founders)
-- Twitter: Conciso, máximo 260 caracteres
+→ LinkedIn: Profesional, con máximo 2 hashtags relevantes (#startup #innovación)
+→ Instagram: Más visual, con máximo 2 hashtags (#startup #buildinpublic)
+→ Twitter: Conciso, máximo 260 caracteres
 
 Devuelve un JSON con esta estructura:
 {
-  "location": "string",
-  "event": "string", 
-  "people": "string",
   "phrase": "string",
   "webText": "string",
   "cta": "string",
@@ -117,7 +118,6 @@ Devuelve un JSON con esta estructura:
   "blogDate": "string",
   "modalContent": "string",
   "tags": "string",
-  "image": "string",
   "modal": "mymodal",
   "width": "1200px",
   "path": "string",
