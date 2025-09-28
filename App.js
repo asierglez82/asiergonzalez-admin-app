@@ -18,6 +18,8 @@ import ConferencesCRUDScreen from './src/screens/ConferencesCRUDScreen';
 import TalksCRUDScreen from './src/screens/TalksCRUDScreen';
 import InfographicsCRUDScreen from './src/screens/InfographicsCRUDScreen';
 import MediaCRUDScreen from './src/screens/MediaCRUDScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
+import GeminiSettingsScreen from './src/screens/GeminiSettingsScreen';
 import Sidebar from './src/components/Sidebar';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -139,6 +141,16 @@ const AuthenticatedApp = () => {
         name="Analytics" 
         component={AnalyticsScreen}
         options={{ title: 'Analytics' }}
+      />
+      <Drawer.Screen 
+        name="Settings" 
+        component={SettingsScreen}
+        options={{ title: 'Configuración' }}
+      />
+      <Drawer.Screen 
+        name="GeminiSettings" 
+        component={GeminiSettingsScreen}
+        options={{ title: 'Configuración Gemini' }}
       />
     </Drawer.Navigator>
   );

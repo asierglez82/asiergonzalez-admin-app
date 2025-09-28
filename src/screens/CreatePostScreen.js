@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Switch, Alert, Dimensions, Image, Platform, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { buildPrompt, buildComprehensivePrompt } from '../services/ai';
-import { generateSmart } from '../services/geminiProxy';
+import geminiService from '../config/geminiConfig';
 import ViewShot, { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { blogPostsService } from '../services/firestore';
 import { storageService } from '../services/storage';
+import socialMediaService from '../config/socialMediaConfig';
 
 // Import dom-to-image solo para web
 let domtoimage;
@@ -67,6 +68,28 @@ const CreatePostScreen = ({ navigation }) => {
   const [genTwitter, setGenTwitter] = useState(false);
   const [genWeb, setGenWeb] = useState(true);
 
+  // Función para limpiar contenido cuando se desactiva un toggle
+  const handleToggleChange = (platform, value) => {
+    switch(platform) {
+      case 'linkedin':
+        setGenLinkedin(value);
+        if (!value) setLinkedinText('');
+        break;
+      case 'instagram':
+        setGenInstagram(value);
+        if (!value) setInstagramText('');
+        break;
+      case 'twitter':
+        setGenTwitter(value);
+        if (!value) setTwitterText('');
+        break;
+      case 'web':
+        setGenWeb(value);
+        if (!value) setWebText('');
+        break;
+    }
+  };
+
   const [linkedinText, setLinkedinText] = useState('');
   const [instagramText, setInstagramText] = useState('');
   const [twitterText, setTwitterText] = useState('');
@@ -82,6 +105,14 @@ const CreatePostScreen = ({ navigation }) => {
   const [uploadedImagePath, setUploadedImagePath] = useState(null);
   const [aiGeneratedFields, setAiGeneratedFields] = useState(new Set());
   const [isDraft, setIsDraft] = useState(true);
+  
+  // Estados para redes sociales conectadas
+  const [connectedPlatforms, setConnectedPlatforms] = useState({
+    instagram: false,
+    twitter: false,
+    linkedin: false
+  });
+  // Estados de publicación en redes sociales eliminados ya que ahora es automático
 
   const baseContext = useMemo(() => ({ imageUrl, location, date, event, people, language, phrase }), [imageUrl, location, date, event, people, language, phrase]);
 
@@ -118,6 +149,20 @@ const CreatePostScreen = ({ navigation }) => {
     }
   }, [title]);
 
+  // Cargar plataformas conectadas al montar el componente
+  useEffect(() => {
+    loadConnectedPlatforms();
+  }, []);
+
+  const loadConnectedPlatforms = async () => {
+    try {
+      const platforms = await socialMediaService.getConnectedPlatforms();
+      setConnectedPlatforms(platforms);
+    } catch (error) {
+      console.error('Error loading connected platforms:', error);
+    }
+  };
+
   // Generación automática de contenido cuando hay suficientes campos
   useEffect(() => {
     const shouldGenerate = imageUrl && (location || event || people) && !generating;
@@ -143,7 +188,7 @@ const CreatePostScreen = ({ navigation }) => {
           language, 
           notes 
         });
-        const result = await generateSmart(prompt);
+        const result = await geminiService.generateSmart(prompt);
         console.log('Raw AI response (auto):', result);
         
         try {
@@ -159,15 +204,15 @@ const CreatePostScreen = ({ navigation }) => {
           if (!webText && parsed.webText) setWebText(parsed.webText);
           if (!cta && parsed.cta) setCta(parsed.cta);
           
-          // Contenido para redes sociales
+          // Contenido para redes sociales (solo si el toggle está activado)
           if (parsed.platforms) {
-            if (parsed.platforms.linkedin && !linkedinText) {
+            if (parsed.platforms.linkedin && !linkedinText && genLinkedin) {
               setLinkedinText(parsed.platforms.linkedin);
             }
-            if (parsed.platforms.instagram && !instagramText) {
+            if (parsed.platforms.instagram && !instagramText && genInstagram) {
               setInstagramText(parsed.platforms.instagram);
             }
-            if (parsed.platforms.twitter && !twitterText) {
+            if (parsed.platforms.twitter && !twitterText && genTwitter) {
               setTwitterText(parsed.platforms.twitter);
             }
           }
@@ -190,11 +235,11 @@ const CreatePostScreen = ({ navigation }) => {
   };
 
   const generateLocalContentForEmptyFields = () => {
-    // Solo generar contenido local para campos que están vacíos
-    if (!linkedinText) setLinkedinText(generatePlatformContent('linkedin', baseContext));
-    if (!instagramText) setInstagramText(generatePlatformContent('instagram', baseContext));
-    if (!twitterText) setTwitterText(generatePlatformContent('twitter', baseContext));
-    if (!webText) setWebText(generateWebContent(baseContext, cta));
+    // Solo generar contenido local para campos que están vacíos Y que tienen el toggle activado
+    if (!linkedinText && genLinkedin) setLinkedinText(generatePlatformContent('linkedin', baseContext));
+    if (!instagramText && genInstagram) setInstagramText(generatePlatformContent('instagram', baseContext));
+    if (!twitterText && genTwitter) setTwitterText(generatePlatformContent('twitter', baseContext));
+    if (!webText && genWeb) setWebText(generateWebContent(baseContext, cta));
     if (!phrase) {
       const localPhrase = generateCTA(baseContext);
       setPhrase(localPhrase);
@@ -235,7 +280,7 @@ La frase debe ser:
 
 Devuelve SOLO la frase, sin comillas ni formato adicional.`;
 
-      const result = await generateSmart(prompt);
+      const result = await geminiService.generateSmart(prompt);
       
       // Limpiar la respuesta (quitar comillas y espacios extra)
       const cleanPhrase = result.replace(/^["']|["']$/g, '').trim();
@@ -290,7 +335,7 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
           event,
           people
         });
-        const result = await generateSmart(prompt);
+        const result = await geminiService.generateSmart(prompt);
         console.log('Raw AI response:', result);
         
         try {
@@ -449,7 +494,7 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
     }
   };
 
-  // Función para guardar como borrador
+  // Función para guardar como borrador (incluye campos de redes sociales)
   const handleSaveDraft = async () => {
     try {
       if (!title || !author) {
@@ -549,7 +594,7 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
         }
       }
 
-      // Crear el blog post como borrador
+      // Crear el blog post como borrador INCLUYENDO campos de redes sociales
       const blogPostData = {
         title,
         author,
@@ -563,20 +608,27 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
         path,
         url,
         slug,
-        draft: true // Marcar como borrador
+        draft: true, // Marcar como borrador
+        // Campos de redes sociales para poder publicar más tarde desde editar
+        socialMedia: {
+          linkedin: genLinkedin ? linkedinText : '',
+          instagram: genInstagram ? instagramText : '',
+          twitter: genTwitter ? twitterText : '',
+          settings: {
+            genLinkedin,
+            genInstagram,
+            genTwitter
+          }
+        }
       };
 
       // Crear el blog post en Firebase
       const createdPost = await blogPostsService.create(blogPostData);
       
-      Alert.alert(
-        'Borrador guardado', 
-        'El blog post se ha guardado como borrador con imagen incluida',
-        [{ 
-          text: 'OK', 
-          onPress: () => navigation.navigate('BlogCRUD')
-        }]
-      );
+      Alert.alert('Borrador guardado', 'El borrador se ha guardado correctamente con la información de redes sociales para poder publicar más tarde.');
+      
+      // Navegar inmediatamente a la gestión de blog posts
+      navigation.navigate('BlogCRUD');
     } catch (error) {
       console.error(error);
       Alert.alert('Error', 'No se pudo guardar el borrador');
@@ -684,7 +736,7 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
         }
       }
 
-      // Crear el blog post con todos los campos de Firebase
+      // Crear el blog post con todos los campos de Firebase incluyendo redes sociales
       const blogPostData = {
         title,
         author,
@@ -698,20 +750,83 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
         path,
         url,
         slug,
-        draft: false // Marcar como publicado
+        draft: false, // Marcar como publicado
+        // Campos de redes sociales
+        socialMedia: {
+          linkedin: genLinkedin ? linkedinText : '',
+          instagram: genInstagram ? instagramText : '',
+          twitter: genTwitter ? twitterText : '',
+          settings: {
+            genLinkedin,
+            genInstagram,
+            genTwitter
+          }
+        }
       };
 
-      // Crear el blog post en Firebase
+      // 1. PRIMERO: Crear el blog post en Firebase
       const createdPost = await blogPostsService.create(blogPostData);
+      console.log('Post creado en Firebase:', createdPost);
       
-      // Cambiar estado a publicado
-      setIsDraft(false);
+      // 2. SEGUNDO: Publicar automáticamente en redes sociales si hay contenido
+      const platformsContent = {};
+      
+      if (connectedPlatforms.linkedin && linkedinText && genLinkedin) {
+        platformsContent.linkedin = linkedinText;
+      }
+      
+      if (connectedPlatforms.instagram && instagramText && genInstagram) {
+        platformsContent.instagram = instagramText;
+      }
+      
+      if (connectedPlatforms.twitter && twitterText && genTwitter) {
+        platformsContent.twitter = twitterText;
+      }
+      
+      let socialMediaResults = null;
+      
+      // Si hay contenido para publicar en redes sociales, publicar
+      if (Object.keys(platformsContent).length > 0) {
+        try {
+          console.log('Publicando en redes sociales automáticamente...');
+          // Usar la imagen de la composición o la imagen URL
+          const imageToUse = finalImageUrl || imageUrl;
+          
+          const result = await socialMediaService.publishToMultiplePlatforms(
+            platformsContent, 
+            imageToUse
+          );
+          
+          socialMediaResults = result;
+          console.log('Resultado publicación redes sociales:', result);
+        } catch (socialError) {
+          console.warn('Error publicando en redes sociales:', socialError);
+          // No fallar todo el proceso si falla la publicación en redes sociales
+        }
+      }
+      
+      // Mostrar mensaje de éxito
+      const webMessage = 'Post publicado en la web correctamente.';
+      let socialMessage = '';
+      
+      if (socialMediaResults && socialMediaResults.success) {
+        const { successful, total, failed } = socialMediaResults.summary;
+        socialMessage = ` También publicado en ${successful} de ${total} redes sociales.`;
+        if (failed > 0) {
+          socialMessage += ` ${failed} fallaron.`;
+        }
+      } else if (Object.keys(platformsContent).length > 0) {
+        socialMessage = ' Error al publicar en redes sociales.';
+      } else {
+        socialMessage = ' Sin contenido para redes sociales.';
+      }
       
       Alert.alert(
-        'Éxito', 
-        'Blog post publicado correctamente',
+        'Publicación completada', 
+        webMessage + socialMessage,
         [{ text: 'OK', onPress: () => navigation.navigate('BlogCRUD') }]
       );
+      
     } catch (error) {
       console.error(error);
       Alert.alert('Error', 'No se pudo crear el blog post');
@@ -719,6 +834,10 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
       setSaving(false);
     }
   };
+
+  // FUNCIÓN ELIMINADA: handlePublishToSocialMedia ya no se necesita
+  // porque la publicación en redes sociales ahora se hace automáticamente
+  // desde handlePublish
 
   return (
     <View style={styles.container}>
@@ -946,12 +1065,12 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
                 padding: isTablet ? '15px 30px' : isMobile ? '10px 20px' : '20px 40px',
                 borderRadius: isTablet ? '8px' : isMobile ? '6px' : '12px',
                 position: 'absolute',
-                top: isTablet ? '630px' : isMobile ? '480px' : '930px',
+                top: isTablet ? '625px' : isMobile ? '475px' : '925px',
                 right: isTablet ? '40px' : isMobile ? '20px' : '60px',
                 zIndex: 10
               }}>
                 <span style={{
-                  color: '#FFFFFF',
+                  color: '#00ca77',
                   fontSize: isTablet ? '18px' : isMobile ? '12px' : '24px',
                   fontWeight: '700',
                   letterSpacing: isTablet ? '2px' : isMobile ? '1px' : '3px',
@@ -962,7 +1081,7 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
                 backgroundColor: '#FFFFFF',
                 borderRadius: isTablet ? '15px' : isMobile ? '10px' : '20px',
                 padding: isTablet ? '40px' : isMobile ? '20px' : '60px',
-                width: isTablet ? '700px' : isMobile ? '300px' : '950px',
+                width: isTablet ? '600px' : isMobile ? '260px' : '800px',
                 minHeight: isTablet ? '550px' : isMobile ? '250px' : '750px',
                 marginTop: isTablet ? '15px' : isMobile ? '10px' : '20px',
                 marginBottom: isTablet ? '30px' : isMobile ? '20px' : '40px',
@@ -1169,19 +1288,19 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
         <View style={styles.fieldContent}>
           <View style={styles.toggleRow}>
             <Text style={styles.toggleLabel}>Generar Web</Text>
-            <Switch value={genWeb} onValueChange={setGenWeb} />
+            <Switch value={genWeb} onValueChange={(value) => handleToggleChange('web', value)} />
           </View>
           <View style={styles.toggleRow}>
             <Text style={styles.toggleLabel}>Generar LinkedIn</Text>
-            <Switch value={genLinkedin} onValueChange={setGenLinkedin} />
+            <Switch value={genLinkedin} onValueChange={(value) => handleToggleChange('linkedin', value)} />
           </View>
           <View style={styles.toggleRow}>
             <Text style={styles.toggleLabel}>Generar Instagram</Text>
-            <Switch value={genInstagram} onValueChange={setGenInstagram} />
+            <Switch value={genInstagram} onValueChange={(value) => handleToggleChange('instagram', value)} />
           </View>
           <View style={styles.toggleRow}>
             <Text style={styles.toggleLabel}>Generar Twitter</Text>
-            <Switch value={genTwitter} onValueChange={setGenTwitter} />
+            <Switch value={genTwitter} onValueChange={(value) => handleToggleChange('twitter', value)} />
           </View>
           <TouchableOpacity 
             style={[styles.genBtn, generating && { opacity: 0.6 }]} 
@@ -1311,11 +1430,12 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
                 )}
               </View>
               <TextInput 
-                style={styles.blogInput} 
+                style={[styles.blogInput, styles.disabledInput]} 
                 value={image} 
                 onChangeText={setImage} 
                 placeholder="/assets/img/blog/imagen.png" 
                 placeholderTextColor="rgba(255,255,255,0.4)" 
+                editable={false}
               />
               {uploadedImagePath && (
                 <Text style={styles.uploadedImageInfo}>
@@ -1395,7 +1515,7 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
         </View>
 
         {/* Contenidos editables */}
-        {!!linkedinText && (
+        {genLinkedin && (
           <View style={styles.fieldCard}>
             <View style={[styles.iconSquare, { backgroundColor: '#0A66C220', borderColor: '#0A66C2' }]}>
               <Ionicons name="logo-linkedin" size={18} color="#0A66C2" />
@@ -1407,7 +1527,7 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
             <View style={[styles.cardAccent, { backgroundColor: '#0A66C2' }]} />
           </View>
         )}
-        {!!instagramText && (
+        {genInstagram && (
           <View style={styles.fieldCard}>
             <View style={[styles.iconSquare, { backgroundColor: '#FF2D9220', borderColor: '#FF2D92' }]}>
               <Ionicons name="logo-instagram" size={18} color="#FF2D92" />
@@ -1419,7 +1539,7 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
             <View style={[styles.cardAccent, { backgroundColor: '#FF2D92' }]} />
           </View>
         )}
-        {!!twitterText && (
+        {genTwitter && (
           <View style={styles.fieldCard}>
             <View style={[styles.iconSquare, { backgroundColor: '#1DA1F220', borderColor: '#1DA1F2' }]}>
               <Ionicons name="logo-twitter" size={18} color="#1DA1F2" />
@@ -1435,6 +1555,84 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
 
 
 
+        {/* Sección de redes sociales conectadas (solo informativa) */}
+        <View style={styles.socialMediaSection}>
+          <View style={styles.socialMediaHeader}>
+            <Text style={styles.socialMediaTitle}>Estado de Redes Sociales</Text>
+            <TouchableOpacity 
+              style={styles.refreshButton}
+              onPress={loadConnectedPlatforms}
+            >
+              <Ionicons name="refresh-outline" size={20} color="#64D2FF" />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.connectedPlatforms}>
+            <View style={[styles.platformIndicator, connectedPlatforms.instagram && styles.platformConnected]}>
+              <Ionicons 
+                name="logo-instagram" 
+                size={20} 
+                color={connectedPlatforms.instagram ? "#FF2D92" : "rgba(255,255,255,0.3)"} 
+              />
+              <Text style={[styles.platformText, connectedPlatforms.instagram && styles.platformTextConnected]}>
+                Instagram
+              </Text>
+              {connectedPlatforms.instagram && (
+                <Ionicons name="checkmark-circle" size={16} color="#00ca77" />
+              )}
+            </View>
+            
+            <View style={[styles.platformIndicator, connectedPlatforms.twitter && styles.platformConnected]}>
+              <Ionicons 
+                name="logo-twitter" 
+                size={20} 
+                color={connectedPlatforms.twitter ? "#1DA1F2" : "rgba(255,255,255,0.3)"} 
+              />
+              <Text style={[styles.platformText, connectedPlatforms.twitter && styles.platformTextConnected]}>
+                Twitter/X
+              </Text>
+              {connectedPlatforms.twitter && (
+                <Ionicons name="checkmark-circle" size={16} color="#00ca77" />
+              )}
+            </View>
+            
+            <View style={[styles.platformIndicator, connectedPlatforms.linkedin && styles.platformConnected]}>
+              <Ionicons 
+                name="logo-linkedin" 
+                size={20} 
+                color={connectedPlatforms.linkedin ? "#0A66C2" : "rgba(255,255,255,0.3)"} 
+              />
+              <Text style={[styles.platformText, connectedPlatforms.linkedin && styles.platformTextConnected]}>
+                LinkedIn
+              </Text>
+              {connectedPlatforms.linkedin && (
+                <Ionicons name="checkmark-circle" size={16} color="#00ca77" />
+              )}
+            </View>
+          </View>
+
+          {(!connectedPlatforms.instagram && !connectedPlatforms.twitter && !connectedPlatforms.linkedin) && (
+            <View style={styles.noConnectionsWarning}>
+              <Ionicons name="warning-outline" size={20} color="#FF9800" />
+              <Text style={styles.noConnectionsText}>
+                No tienes redes sociales conectadas. Ve a Configuración para vincular tus cuentas.
+              </Text>
+              <TouchableOpacity 
+                style={styles.goToSettingsBtn}
+                onPress={() => navigation.navigate('Settings')}
+              >
+                <Text style={styles.goToSettingsBtnText}>Ir a Configuración</Text>
+                <Ionicons name="arrow-forward" size={16} color="#64D2FF" />
+              </TouchableOpacity>
+            </View>
+          )}
+          
+          <Text style={styles.socialInfoText}>
+            ℹ️ Al usar "Publicar", el post se publicará tanto en la web como en las redes sociales conectadas automáticamente.
+          </Text>
+        </View>
+
+        {/* Botones de acción AL FINAL */}
         <View style={styles.actionButtons}>
           <TouchableOpacity 
             style={[styles.draftBtn, saving && { opacity: 0.6 }]} 
@@ -1451,7 +1649,7 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
             disabled={saving}
           >
             <Ionicons name="send-outline" size={18} color="#FFFFFF" />
-            <Text style={styles.publishBtnText}>{saving ? 'Publicando...' : 'Publicar'}</Text>
+            <Text style={styles.publishBtnText}>{saving ? 'Publicando...' : 'Publicar en Web y Redes Sociales'}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -1899,10 +2097,10 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   publishBtn: {
-    marginTop: 8,
     backgroundColor: '#ff6b6b',
     borderRadius: 10,
-    paddingVertical: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
@@ -1910,10 +2108,17 @@ const styles = StyleSheet.create({
   },
   publishBtnText: {
     color: '#FFFFFF',
-    fontWeight: '800',
-    fontSize: 15,
-    letterSpacing: 0.2,
-    marginLeft: 6,
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  socialInfoText: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 14,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 16,
+    paddingHorizontal: 16,
+    lineHeight: 20,
   },
   previewCard: {
     marginTop: 16,
@@ -1973,7 +2178,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 60,
-    width: 950,
+    width: 800,
     minHeight: 750,
     marginTop: 20,
     marginBottom: 40,
@@ -1987,7 +2192,7 @@ const styles = StyleSheet.create({
   composeWhiteBoxTablet: {
     borderRadius: 15,
     padding: 40,
-    width: 700,
+    width: 600,
     minHeight: 550,
     marginTop: 15,
     marginBottom: 30,
@@ -1995,7 +2200,7 @@ const styles = StyleSheet.create({
   composeWhiteBoxMobile: {
     borderRadius: 10,
     padding: 20,
-    width: 300,
+    width: 260,
     minHeight: 250,
     marginTop: 10,
     marginBottom: 20,
@@ -2294,6 +2499,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
+  disabledInput: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    color: 'rgba(255, 255, 255, 0.6)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
   imageFieldContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -2363,26 +2573,109 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   actionButtons: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     gap: 12,
     marginTop: 20,
     marginBottom: 20,
   },
   draftBtn: {
-    flex: 1,
     backgroundColor: '#FF9800',
     paddingVertical: 12,
     paddingHorizontal: 20,
-    borderRadius: 8,
+    borderRadius: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
   },
   draftBtnText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
-    marginLeft: 8,
+  },
+  // Estilos para redes sociales
+  socialMediaSection: {
+    marginTop: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  socialMediaHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  socialMediaTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  refreshButton: {
+    padding: 8,
+  },
+  connectedPlatforms: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 20,
+  },
+  platformIndicator: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    minWidth: 80,
+  },
+  platformConnected: {
+    backgroundColor: 'rgba(0, 202, 119, 0.1)',
+    borderColor: 'rgba(0, 202, 119, 0.3)',
+  },
+  platformText: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.6)',
+    marginTop: 6,
+    textAlign: 'center',
+  },
+  platformTextConnected: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  // Estilos eliminados para botones de redes sociales que ya no se usan
+  noConnectionsWarning: {
+    backgroundColor: 'rgba(255, 152, 0, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 152, 0, 0.3)',
+    alignItems: 'center',
+  },
+  noConnectionsText: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 14,
+    textAlign: 'center',
+    marginVertical: 12,
+    lineHeight: 20,
+  },
+  goToSettingsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(100, 210, 255, 0.1)',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(100, 210, 255, 0.3)',
+    gap: 8,
+  },
+  goToSettingsBtnText: {
+    color: '#64D2FF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

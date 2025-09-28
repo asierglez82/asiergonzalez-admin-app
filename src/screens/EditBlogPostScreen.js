@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { blogPostsService } from '../services/firestore';
+import socialMediaService from '../config/socialMediaConfig';
 
 const { width, height } = Dimensions.get('window');
 
@@ -27,6 +28,23 @@ const EditBlogPostScreen = ({ navigation, route }) => {
   const [screenData, setScreenData] = useState(Dimensions.get('window'));
   const [post, setPost] = useState(null);
   const [isDraft, setIsDraft] = useState(true);
+  
+  // Estados para redes sociales
+  const [connectedPlatforms, setConnectedPlatforms] = useState({
+    instagram: false,
+    twitter: false,
+    linkedin: false
+  });
+  const [socialMediaData, setSocialMediaData] = useState({
+    linkedin: '',
+    instagram: '',
+    twitter: '',
+    settings: {
+      genLinkedin: true,
+      genInstagram: true,
+      genTwitter: false
+    }
+  });
   
   // Form fields - actualizados para coincidir con Firebase
   const [formData, setFormData] = useState({
@@ -72,6 +90,20 @@ const EditBlogPostScreen = ({ navigation, route }) => {
       // Inicializar estado de borrador
       setIsDraft(data.draft !== false);
       
+      // Cargar datos de redes sociales si existen
+      if (data.socialMedia) {
+        setSocialMediaData({
+          linkedin: data.socialMedia.linkedin || '',
+          instagram: data.socialMedia.instagram || '',
+          twitter: data.socialMedia.twitter || '',
+          settings: {
+            genLinkedin: data.socialMedia.settings?.genLinkedin !== false,
+            genInstagram: data.socialMedia.settings?.genInstagram !== false,
+            genTwitter: data.socialMedia.settings?.genTwitter || false
+          }
+        });
+      }
+      
       console.log('Form data set:', formData);
     } catch (error) {
       console.error('Error loading blog post:', error);
@@ -94,6 +126,20 @@ const EditBlogPostScreen = ({ navigation, route }) => {
       navigation.goBack();
     }
   }, [postId]);
+  
+  // Cargar plataformas conectadas al montar el componente
+  useEffect(() => {
+    loadConnectedPlatforms();
+  }, []);
+  
+  const loadConnectedPlatforms = async () => {
+    try {
+      const platforms = await socialMediaService.getConnectedPlatforms();
+      setConnectedPlatforms(platforms);
+    } catch (error) {
+      console.error('Error loading connected platforms:', error);
+    }
+  };
 
   // useEffect para dimensiones
   useEffect(() => {
@@ -127,7 +173,9 @@ const EditBlogPostScreen = ({ navigation, route }) => {
       const updateData = {
         ...formData,
         draft: isDraft,
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        // Incluir datos de redes sociales
+        socialMedia: socialMediaData
       };
 
       await blogPostsService.update(postId, updateData);
@@ -140,6 +188,90 @@ const EditBlogPostScreen = ({ navigation, route }) => {
     } catch (error) {
       Alert.alert('Error', 'Error al actualizar el post');
       console.error('Error updating blog post:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Función para publicar (actualizar a publicado Y publicar en redes sociales)
+  const handlePublish = async () => {
+    try {
+      setSaving(true);
+      
+      if (!formData.title.trim()) {
+        Alert.alert('Error', 'El título es requerido');
+        return;
+      }
+      
+      // 1. Actualizar el post como publicado
+      const updateData = {
+        ...formData,
+        draft: false, // Marcar como publicado
+        updatedAt: new Date(),
+        socialMedia: socialMediaData
+      };
+
+      await blogPostsService.update(postId, updateData);
+      
+      // 2. Publicar en redes sociales si hay contenido
+      const platformsContent = {};
+      
+      if (connectedPlatforms.linkedin && socialMediaData.linkedin && socialMediaData.settings.genLinkedin) {
+        platformsContent.linkedin = socialMediaData.linkedin;
+      }
+      
+      if (connectedPlatforms.instagram && socialMediaData.instagram && socialMediaData.settings.genInstagram) {
+        platformsContent.instagram = socialMediaData.instagram;
+      }
+      
+      if (connectedPlatforms.twitter && socialMediaData.twitter && socialMediaData.settings.genTwitter) {
+        platformsContent.twitter = socialMediaData.twitter;
+      }
+      
+      let socialMediaResults = null;
+      
+      // Si hay contenido para publicar en redes sociales, publicar
+      if (Object.keys(platformsContent).length > 0) {
+        try {
+          console.log('Publicando en redes sociales desde edición...');
+          
+          const result = await socialMediaService.publishToMultiplePlatforms(
+            platformsContent, 
+            formData.image
+          );
+          
+          socialMediaResults = result;
+          console.log('Resultado publicación redes sociales:', result);
+        } catch (socialError) {
+          console.warn('Error publicando en redes sociales:', socialError);
+        }
+      }
+      
+      // Mostrar mensaje de éxito
+      const webMessage = 'Post publicado en la web correctamente.';
+      let socialMessage = '';
+      
+      if (socialMediaResults && socialMediaResults.success) {
+        const { successful, total, failed } = socialMediaResults.summary;
+        socialMessage = ` También publicado en ${successful} de ${total} redes sociales.`;
+        if (failed > 0) {
+          socialMessage += ` ${failed} fallaron.`;
+        }
+      } else if (Object.keys(platformsContent).length > 0) {
+        socialMessage = ' Error al publicar en redes sociales.';
+      } else {
+        socialMessage = ' Sin contenido para redes sociales.';
+      }
+      
+      Alert.alert(
+        'Publicación completada', 
+        webMessage + socialMessage,
+        [{ text: 'OK', onPress: () => navigation.navigate('BlogCRUD') }]
+      );
+      
+    } catch (error) {
+      Alert.alert('Error', 'Error al publicar el post');
+      console.error('Error publishing blog post:', error);
     } finally {
       setSaving(false);
     }
@@ -167,6 +299,20 @@ const EditBlogPostScreen = ({ navigation, route }) => {
         slug: post.slug || ''
       });
       setIsDraft(post.draft !== false);
+      
+      // Restaurar datos de redes sociales
+      if (post.socialMedia) {
+        setSocialMediaData({
+          linkedin: post.socialMedia.linkedin || '',
+          instagram: post.socialMedia.instagram || '',
+          twitter: post.socialMedia.twitter || '',
+          settings: {
+            genLinkedin: post.socialMedia.settings?.genLinkedin !== false,
+            genInstagram: post.socialMedia.settings?.genInstagram !== false,
+            genTwitter: post.socialMedia.settings?.genTwitter || false
+          }
+        });
+      }
     }
     Alert.alert('Cambios deshechos', 'Se han restaurado los valores originales del post');
   };
@@ -407,6 +553,146 @@ const EditBlogPostScreen = ({ navigation, route }) => {
               placeholderTextColor="rgba(255, 255, 255, 0.5)"
             />
           </View>
+        </View>
+
+        {/* Sección de redes sociales */}
+        <View style={[styles.section, isTablet && styles.sectionTablet, isMobile && styles.sectionMobile]}>
+          <Text style={[styles.sectionTitle, isTablet && styles.sectionTitleTablet, isMobile && styles.sectionTitleMobile]}>
+            Redes Sociales
+          </Text>
+          
+          <View style={styles.socialMediaHeader}>
+            <Text style={styles.socialMediaSubtitle}>Estado de plataformas conectadas</Text>
+            <TouchableOpacity 
+              style={styles.refreshButton}
+              onPress={loadConnectedPlatforms}
+            >
+              <Ionicons name="refresh-outline" size={20} color="#64D2FF" />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.connectedPlatforms}>
+            <View style={[styles.platformIndicator, connectedPlatforms.instagram && styles.platformConnected]}>
+              <Ionicons 
+                name="logo-instagram" 
+                size={20} 
+                color={connectedPlatforms.instagram ? "#FF2D92" : "rgba(255,255,255,0.3)"} 
+              />
+              <Text style={[styles.platformText, connectedPlatforms.instagram && styles.platformTextConnected]}>
+                Instagram
+              </Text>
+              {connectedPlatforms.instagram && (
+                <Ionicons name="checkmark-circle" size={16} color="#00ca77" />
+              )}
+            </View>
+            
+            <View style={[styles.platformIndicator, connectedPlatforms.twitter && styles.platformConnected]}>
+              <Ionicons 
+                name="logo-twitter" 
+                size={20} 
+                color={connectedPlatforms.twitter ? "#1DA1F2" : "rgba(255,255,255,0.3)"} 
+              />
+              <Text style={[styles.platformText, connectedPlatforms.twitter && styles.platformTextConnected]}>
+                Twitter/X
+              </Text>
+              {connectedPlatforms.twitter && (
+                <Ionicons name="checkmark-circle" size={16} color="#00ca77" />
+              )}
+            </View>
+            
+            <View style={[styles.platformIndicator, connectedPlatforms.linkedin && styles.platformConnected]}>
+              <Ionicons 
+                name="logo-linkedin" 
+                size={20} 
+                color={connectedPlatforms.linkedin ? "#0A66C2" : "rgba(255,255,255,0.3)"} 
+              />
+              <Text style={[styles.platformText, connectedPlatforms.linkedin && styles.platformTextConnected]}>
+                LinkedIn
+              </Text>
+              {connectedPlatforms.linkedin && (
+                <Ionicons name="checkmark-circle" size={16} color="#00ca77" />
+              )}
+            </View>
+          </View>
+          
+          {/* Campos de contenido para redes sociales */}
+          {socialMediaData.settings.genLinkedin && (
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>
+                Contenido LinkedIn
+              </Text>
+              <TextInput
+                style={[styles.textArea, isTablet && styles.textAreaTablet, isMobile && styles.textAreaMobile]}
+                value={socialMediaData.linkedin}
+                onChangeText={(value) => setSocialMediaData(prev => ({...prev, linkedin: value}))}
+                placeholder="Contenido para LinkedIn"
+                placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                multiline
+                numberOfLines={4}
+              />
+            </View>
+          )}
+          
+          {socialMediaData.settings.genInstagram && (
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>
+                Contenido Instagram
+              </Text>
+              <TextInput
+                style={[styles.textArea, isTablet && styles.textAreaTablet, isMobile && styles.textAreaMobile]}
+                value={socialMediaData.instagram}
+                onChangeText={(value) => setSocialMediaData(prev => ({...prev, instagram: value}))}
+                placeholder="Contenido para Instagram"
+                placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                multiline
+                numberOfLines={4}
+              />
+            </View>
+          )}
+          
+          {socialMediaData.settings.genTwitter && (
+            <View style={styles.inputGroup}>
+              <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>
+                Contenido Twitter/X
+              </Text>
+              <TextInput
+                style={[styles.textArea, isTablet && styles.textAreaTablet, isMobile && styles.textAreaMobile]}
+                value={socialMediaData.twitter}
+                onChangeText={(value) => setSocialMediaData(prev => ({...prev, twitter: value}))}
+                placeholder="Contenido para Twitter/X"
+                placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                multiline
+                numberOfLines={4}
+              />
+            </View>
+          )}
+          
+          <Text style={styles.socialInfoText}>
+            ℹ️ Al usar "Publicar", el post se actualizará en la web y también se publicará en las redes sociales conectadas automáticamente.
+          </Text>
+        </View>
+
+        {/* Botones de acción */}
+        <View style={styles.actionButtons}>
+          <TouchableOpacity 
+            style={[styles.saveButton, saving && styles.saveButtonDisabled]} 
+            onPress={handleSave} 
+            disabled={saving}
+          >
+            <Ionicons name="save-outline" size={18} color="#FFFFFF" />
+            <Text style={styles.saveButtonText}>{saving ? 'Guardando...' : 'Guardar Cambios'}</Text>
+          </TouchableOpacity>
+          
+          {isDraft && (
+            <TouchableOpacity 
+              style={[styles.publishButton, saving && styles.publishButtonDisabled]} 
+              onPress={handlePublish} 
+              disabled={saving}
+            >
+              <Ionicons name="send-outline" size={18} color="#FFFFFF" />
+              <Text style={styles.publishButtonText}>{saving ? 'Publicando...' : 'Publicar en Web y Redes Sociales'}</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
     </View>
@@ -683,6 +969,93 @@ const styles = StyleSheet.create({
   },
   toggleDescriptionMobile: {
     fontSize: 11,
+  },
+
+  // Estilos para redes sociales
+  socialMediaHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  socialMediaSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '500',
+  },
+  refreshButton: {
+    padding: 8,
+  },
+  connectedPlatforms: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 20,
+  },
+  platformIndicator: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    minWidth: 80,
+  },
+  platformConnected: {
+    backgroundColor: 'rgba(0, 202, 119, 0.1)',
+    borderColor: 'rgba(0, 202, 119, 0.3)',
+  },
+  platformText: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.6)',
+    marginTop: 6,
+    textAlign: 'center',
+  },
+  platformTextConnected: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  socialInfoText: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 14,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 16,
+    paddingHorizontal: 16,
+    lineHeight: 20,
+  },
+
+  // Estilos para botones de acción
+  actionButtons: {
+    flexDirection: 'column',
+    gap: 12,
+    marginTop: 24,
+    marginBottom: 20,
+    paddingHorizontal: 24,
+  },
+  saveButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  publishButton: {
+    backgroundColor: '#ff6b6b',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  publishButtonDisabled: {
+    backgroundColor: 'rgba(255, 107, 107, 0.5)',
+  },
+  publishButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 16,
   },
 });
 

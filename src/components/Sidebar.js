@@ -21,6 +21,16 @@ const Sidebar = ({ navigation, state }) => {
       route: 'Analytics',
       description: 'Métricas y reportes'
     },
+    { 
+      name: 'Configuración', 
+      route: 'Settings',
+      description: 'Vincular redes sociales'
+    },
+    { 
+      name: 'Gemini IA', 
+      route: 'GeminiSettings',
+      description: 'Configurar servicio de IA'
+    },
   ];
 
   const handleLogout = async () => {
