@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Procesando autorización...</title>
+    <style>
+        body { 
+            font-family: sans-serif; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
+        }
+        div {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <h1>¡Autorización completada!</h1>
+        <p>Puedes cerrar esta pestaña y volver a la aplicación.</p>
+    </div>
+    <script>
+        (function () {
+            try {
+                // Construir el payload con la URL completa (incluyendo ?code=...&state=...)
+                var payload = {
+                    type: 'expo-web-browser',
+                    url: window.location.href
+                };
+
+                // Función para enviar el mensaje a todos los destinos posibles
+                function postToAllTargets() {
+                    try {
+                        if (window.opener && !window.opener.closed) {
+                            window.opener.postMessage(payload, '*');
+                        }
+                    } catch (_) {}
+                    try {
+                        if (window.parent && window.parent !== window) {
+                            window.parent.postMessage(payload, '*');
+                        }
+                    } catch (_) {}
+                }
+
+                // Envío inmediato
+                postToAllTargets();
+
+                // Reintentos durante ~4s para asegurar recepción del listener
+                var attempts = 0;
+                var maxAttempts = 10; // 20 * 200ms = 4s
+                var interval = setInterval(function () {
+                    attempts += 1;
+                    postToAllTargets();
+                    if (attempts >= maxAttempts) {
+                        clearInterval(interval);
+                        try { window.close(); } catch (_) {}
+                    }
+                }, 200);
+            } catch (e) {
+                // En caso de que no se pueda cerrar automáticamente, al menos no romper la UI
+                console.error('Error enviando mensaje de callback:', e);
+            }
+        })();
+    </script>
+</body>
+</html>

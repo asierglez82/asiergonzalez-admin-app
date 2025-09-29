@@ -88,7 +88,7 @@ const SettingsScreen = ({ navigation }) => {
           platform: 'linkedin',
           action: 'exchange_token',
           code: code,
-          redirectUri: window.location.origin + '/auth/linkedin/callback'
+          redirectUri: window.location.origin + '/auth/linkedin/callback/'
         })
       });
 
@@ -99,7 +99,7 @@ const SettingsScreen = ({ navigation }) => {
         console.log('🎉 ¡ÉXITO TOTAL! Token obtenido y guardado.');
         setLinkedinConnected(true);
         if (result.credentials?.profile) {
-          setLinkedinPersonId(result.credentials.profile.id);
+          setLinkedinPersonId(String(result.credentials.profile.id || ''));
         }
         Alert.alert('Éxito', 'LinkedIn autorizado correctamente');
         
@@ -508,7 +508,7 @@ const SettingsScreen = ({ navigation }) => {
               <Text style={styles.credentialLabel}>Access Token</Text>
               <TextInput
                 style={styles.credentialInput}
-                value={linkedinAccessToken}
+                value={linkedinAccessToken ?? ''}
                 onChangeText={setLinkedinAccessToken}
                 placeholder="Tu access token de LinkedIn"
                 placeholderTextColor="rgba(255,255,255,0.4)"
@@ -519,7 +519,7 @@ const SettingsScreen = ({ navigation }) => {
               <Text style={styles.credentialLabel}>Person ID (URN)</Text>
               <TextInput
                 style={styles.credentialInput}
-                value={linkedinPersonId}
+                value={linkedinPersonId ?? ''}
                 onChangeText={setLinkedinPersonId}
                 placeholder="Tu person ID de LinkedIn"
                 placeholderTextColor="rgba(255,255,255,0.4)"

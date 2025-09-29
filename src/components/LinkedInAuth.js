@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import { socialMediaCloudService } from '../services/socialMediaCloud';
@@ -9,7 +9,7 @@ const LinkedInAuth = ({ onAuthSuccess, onAuthError }) => {
 
   // Configuración de LinkedIn OAuth
   const LINKEDIN_CLIENT_ID = '77nofg3l51f0kb';
-  const REDIRECT_URI = 'http://localhost:8081/auth/linkedin/callback';
+  const REDIRECT_URI = 'http://localhost:8081/auth/linkedin/callback/';
   const SCOPE = 'openid profile email w_member_social';
   const STATE = 'linkedin_auth_' + Date.now();
 
@@ -17,28 +17,6 @@ const LinkedInAuth = ({ onAuthSuccess, onAuthError }) => {
     setIsLoading(true);
 
     try {
-      // Listener de fallback: si el popup carga el callback, enviará un postMessage con la URL
-      const onLinkedInPopupMessage = (event) => {
-        try {
-          if (event.origin !== window.location.origin) return;
-          if (event.data?.type === 'LINKEDIN_AUTH_SUCCESS_URL' && typeof event.data.url === 'string') {
-            console.log('✅ [FALLBACK] URL recibida vía postMessage:', event.data.url);
-            const url = new URL(event.data.url);
-            const params = new URLSearchParams(url.search);
-            const code = params.get('code');
-            const returnedState = params.get('state');
-            if (returnedState === STATE && code) {
-              window.removeEventListener('message', onLinkedInPopupMessage);
-              onAuthSuccess?.(code);
-            }
-          }
-        } catch (_) {}
-      };
-      if (typeof window !== 'undefined' && window.addEventListener) {
-        window.addEventListener('message', onLinkedInPopupMessage);
-      }
-      // (Un solo listener es suficiente: onLinkedInPopupMessage)
-
       // Construir la URL de autorización de LinkedIn
       const authUrl = `https://www.linkedin.com/oauth/v2/authorization?` +
         `response_type=code&` +
@@ -49,12 +27,50 @@ const LinkedInAuth = ({ onAuthSuccess, onAuthError }) => {
 
       console.log('🔗 URL de autorización:', authUrl);
 
-      // Abrir sesión de auth con Expo Web Browser (web y nativo)
+      // Flujo específico para Web: escuchar manualmente el postMessage del callback
+      if (Platform.OS === 'web') {
+        const codeFromMessage = await new Promise(async (resolve, reject) => {
+          let timeoutId;
+          const onMessage = (event) => {
+            try {
+              const data = event?.data || {};
+              if (data?.type === 'expo-web-browser' && typeof data?.url === 'string') {
+                if (data.url.startsWith(REDIRECT_URI)) {
+                  window.removeEventListener('message', onMessage);
+                  clearTimeout(timeoutId);
+                  resolve(new URL(data.url).searchParams.get('code'));
+                }
+              }
+            } catch (_) {}
+          };
+          window.addEventListener('message', onMessage);
+          // Abrir en una nueva pestaña/ventana
+          await WebBrowser.openBrowserAsync(authUrl);
+          // Timeout de seguridad
+          timeoutId = setTimeout(() => {
+            window.removeEventListener('message', onMessage);
+            reject(new Error('Timeout esperando respuesta de LinkedIn'));
+          }, 120000);
+        });
+
+        if (codeFromMessage) {
+          console.log('✅ [PASO 2] Código de autorización extraído:', (codeFromMessage || '').substring(0, 15) + '...');
+          onAuthSuccess?.(codeFromMessage);
+          return;
+        }
+      }
+
+      // Flujo estándar (nativo y fallback web)
       const result = await WebBrowser.openAuthSessionAsync(authUrl, REDIRECT_URI);
+      console.log('ℹ️ openAuthSessionAsync result.type:', result?.type);
 
       if (result.type === 'success' && result.url) {
         console.log('✅ [PASO 1] Ventana cerrada con éxito. URL recibida:', result.url);
         const url = new URL(result.url);
+        // Verificamos que la URL recibida sea la correcta, aunque el cierre se haya activado antes
+        if (!url.pathname.startsWith('/auth/linkedin/callback')) {
+          throw new Error('La redirección no fue a la URL de callback esperada.');
+        }
         const params = new URLSearchParams(url.search);
         const code = params.get('code');
         const returnedState = params.get('state');
@@ -70,7 +86,7 @@ const LinkedInAuth = ({ onAuthSuccess, onAuthError }) => {
           const errorDescription = params.get('error_description') || 'No se recibió el código de autorización.';
           throw new Error(errorDescription);
         }
-      } else if (result.type === 'cancel') {
+      } else if (result.type === 'cancel' || result.type === 'dismiss') {
         console.log('👋 Autorización cancelada por el usuario');
       }
 

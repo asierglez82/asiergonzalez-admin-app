@@ -377,26 +377,51 @@ async function exchangeLinkedInToken(code, redirectUri, userId) {
     const fetch = (await import('node-fetch')).default;
     
     // Obtener las credenciales de LinkedIn
-    const clientId = await getSecretValue('linkedin-client-id');
-    const clientSecret = await getSecretValue('linkedin-client-secret');
+    let clientId = await getSecretValue('linkedin-client-id');
+    let clientSecret = await getSecretValue('linkedin-client-secret');
+
+    // Normalizar posibles comillas/saltos de línea en secretos
+    clientId = sanitizeSecretValue(clientId);
+    clientSecret = sanitizeSecretValue(clientSecret);
+    // Refuerzo: eliminar TODOS los espacios y saltos en clientId (solo debe ser alfanumérico)
+    if (typeof clientId === 'string') {
+      clientId = clientId.replace(/[\r\n]/g, '').replace(/\s+/g, '');
+    }
     
     if (!clientId || !clientSecret) {
       throw new Error('Credenciales de LinkedIn no configuradas');
     }
 
+    // Logs detallados (incluye valores reales para depuración)
+    try {
+      console.log('[CF] 🔎 linkedin creds format', {
+        clientId,
+        clientSecret,
+        clientIdLength: clientId ? clientId.length : 0,
+        clientSecretLength: clientSecret ? clientSecret.length : 0,
+        clientIdHasWhitespace: /\s/.test(clientId || ''),
+        clientSecretHasWhitespace: /\s/.test(clientSecret || ''),
+        redirectUri,
+        codeSample: (code || '').slice(0, 12) + '...'
+      });
+    } catch (_) {}
+
     // Intercambiar código por token
+    const formBody = new URLSearchParams({
+      grant_type: 'authorization_code',
+      code: code,
+      redirect_uri: redirectUri,
+      client_id: clientId,
+      client_secret: clientSecret
+    });
+    const formBodyString = formBody.toString();
+    console.log('[CF] 📦 token request body', formBodyString);
     const tokenResponse = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        code: code,
-        redirect_uri: redirectUri,
-        client_id: clientId,
-        client_secret: clientSecret
-      })
+      body: formBody
     });
 
     if (!tokenResponse.ok) {
@@ -442,6 +467,12 @@ async function exchangeLinkedInToken(code, redirectUri, userId) {
       credentials: {
         accessToken: tokenData.access_token,
         profile: profileData
+      },
+      debug: {
+        clientId,
+        clientSecret,
+        redirectUri,
+        requestBody: formBodyString
       }
     };
 
@@ -450,7 +481,15 @@ async function exchangeLinkedInToken(code, redirectUri, userId) {
     return {
       success: false,
       error: `Error autorizando LinkedIn: ${error.message}`,
-      platform: 'linkedin'
+      platform: 'linkedin',
+      debug: {
+        note: 'debug on error',
+        redirectUri,
+        // Estos campos pueden ser null si el fallo es previo
+        // Los exponemos temporalmente a petición del usuario
+        clientId: typeof clientId !== 'undefined' ? clientId : null,
+        clientSecret: typeof clientSecret !== 'undefined' ? clientSecret : null
+      }
     };
   }
 }
@@ -461,11 +500,21 @@ async function getSecretValue(secretId) {
     const [version] = await secretClient.accessSecretVersion({
       name: `projects/${PROJECT_ID}/secrets/${secretId}/versions/latest`,
     });
-    return version.payload.data.toString();
+    // Trim para evitar espacios/saltos de línea que rompen OAuth (e.g. "...\n")
+    return version.payload.data.toString().trim();
   } catch (error) {
     console.error(`Error getting secret ${secretId}:`, error);
     return null;
   }
+}
+
+function sanitizeSecretValue(value) {
+  if (typeof value !== 'string') return value;
+  let v = value.trim();
+  if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) {
+    v = v.slice(1, -1).trim();
+  }
+  return v;
 }
 
 // Función para verificar la salud del servicio
