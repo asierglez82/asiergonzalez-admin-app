@@ -843,23 +843,23 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
     <View style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
       <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <Text style={[styles.title, { color: '#00ca77' }]}>Nuevo Post</Text>
+          <Text style={styles.subtitle}>Crear publicación con assets y contenido por red</Text>
+        </View>
         <TouchableOpacity 
           style={styles.backButton}
           onPress={() => navigation.navigate('ContentEditor')}
         >
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
-        <View style={styles.headerContent}>
-          <Text style={styles.title}>Nuevo Post</Text>
-          <Text style={styles.subtitle}>Crear publicación con assets y contenido por red</Text>
-        </View>
       </View>
 
       <View style={styles.grid}>
         {/* Imagen */}
         <View style={styles.fieldCard}>
-          <View style={[styles.iconSquare, { backgroundColor: '#007AFF20', borderColor: '#007AFF' }]}>
-            <Ionicons name="image-outline" size={18} color="#007AFF" />
+          <View style={[styles.iconSquare, { backgroundColor: '#00ca77', borderColor: '#00ca77' }]}>
+            <Ionicons name="image-outline" size={18} color="#ffffff" />
           </View>
           <View style={styles.fieldContent}>
             <Text style={styles.label}>Foto (URL)</Text>
@@ -885,15 +885,15 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
               <Image source={{ uri: imageUrl }} style={styles.preview} />
             ) : null}
           </View>
-          <View style={[styles.cardAccent, { backgroundColor: '#007AFF' }]} />
+          <View style={[styles.cardAccent, { backgroundColor: '#00ca77' }]} />
         </View>
 
         
 
         {/* Localización */}
         <View style={styles.fieldCard}>
-          <View style={[styles.iconSquare, { backgroundColor: '#34C75920', borderColor: '#34C759' }]}>
-            <Ionicons name="location-outline" size={18} color="#34C759" />
+          <View style={[styles.iconSquare, { backgroundColor: '#00ca77', borderColor: '#00ca77' }]}>
+            <Ionicons name="location-outline" size={18} color="#ffffff" />
           </View>
           <View style={styles.fieldContent}>
             <Text style={styles.label}>Localización</Text>
@@ -905,13 +905,13 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
               onChangeText={setLocation}
             />
           </View>
-          <View style={[styles.cardAccent, { backgroundColor: '#34C759' }]} />
+          <View style={[styles.cardAccent, { backgroundColor: '#00ca77' }]} />
         </View>
 
         {/* Fecha */}
         <View style={styles.fieldCard}>
-          <View style={[styles.iconSquare, { backgroundColor: '#FF9F0A20', borderColor: '#FF9F0A' }]}>
-            <Ionicons name="calendar-outline" size={18} color="#FF9F0A" />
+          <View style={[styles.iconSquare, { backgroundColor: '#00ca77', borderColor: '#00ca77' }]}>
+            <Ionicons name="calendar-outline" size={18} color="#ffffff" />
           </View>
           <View style={styles.fieldContent}>
             <Text style={styles.label}>Fecha</Text>
@@ -923,7 +923,7 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
               <Ionicons name="calendar-outline" size={20} color="rgba(255,255,255,0.6)" />
             </TouchableOpacity>
           </View>
-          <View style={[styles.cardAccent, { backgroundColor: '#FF9F0A' }]} />
+          <View style={[styles.cardAccent, { backgroundColor: '#00ca77' }]} />
         </View>
 
         {showDatePicker && (
@@ -937,8 +937,8 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
 
         {/* Evento */}
         <View style={styles.fieldCard}>
-          <View style={[styles.iconSquare, { backgroundColor: '#5856D620', borderColor: '#5856D6' }]}>
-            <Ionicons name="pricetag-outline" size={18} color="#5856D6" />
+          <View style={[styles.iconSquare, { backgroundColor: '#00ca77', borderColor: '#00ca77' }]}>
+            <Ionicons name="pricetag-outline" size={18} color="#ffffff" />
           </View>
           <View style={styles.fieldContent}>
             <Text style={styles.label}>Lugar/Evento</Text>
@@ -950,13 +950,13 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
               onChangeText={setEvent}
             />
           </View>
-          <View style={[styles.cardAccent, { backgroundColor: '#5856D6' }]} />
+          <View style={[styles.cardAccent, { backgroundColor: '#00ca77' }]} />
         </View>
 
         {/* Personas */}
         <View style={styles.fieldCard}>
-          <View style={[styles.iconSquare, { backgroundColor: '#FF2D9220', borderColor: '#FF2D92' }]}>
-            <Ionicons name="people-outline" size={18} color="#FF2D92" />
+          <View style={[styles.iconSquare, { backgroundColor: '#00ca77', borderColor: '#00ca77' }]}>
+            <Ionicons name="people-outline" size={18} color="#ffffff" />
           </View>
           <View style={styles.fieldContent}>
             <Text style={styles.label}>Personas (separadas por coma)</Text>
@@ -968,13 +968,13 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
               onChangeText={setPeople}
             />
           </View>
-          <View style={[styles.cardAccent, { backgroundColor: '#FF2D92' }]} />
+          <View style={[styles.cardAccent, { backgroundColor: '#00ca77' }]} />
         </View>
 
         {/* Idioma */}
         <View style={styles.fieldCard}>
-          <View style={[styles.iconSquare, { backgroundColor: '#64D2FF20', borderColor: '#64D2FF' }]}>
-            <Ionicons name="language-outline" size={18} color="#64D2FF" />
+          <View style={[styles.iconSquare, { backgroundColor: '#00ca77', borderColor: '#00ca77' }]}>
+            <Ionicons name="language-outline" size={18} color="#ffffff" />
           </View>
           <View style={styles.fieldContent}>
             <Text style={styles.label}>Idioma</Text>
@@ -986,28 +986,28 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
               ))}
             </View>
           </View>
-          <View style={[styles.cardAccent, { backgroundColor: '#64D2FF' }]} />
+          <View style={[styles.cardAccent, { backgroundColor: '#00ca77' }]} />
         </View>
 
         
 
       {/* Notas */}
       <View style={styles.fieldCard}>
-        <View style={[styles.iconSquare, { backgroundColor: '#B0B0B020', borderColor: '#B0B0B0' }]}>
-          <Ionicons name="create-outline" size={18} color="#B0B0B0" />
+        <View style={[styles.iconSquare, { backgroundColor: '#00ca77', borderColor: '#00ca77' }]}>
+          <Ionicons name="create-outline" size={18} color="#ffffff" />
         </View>
         <View style={styles.fieldContent}>
           <Text style={styles.label}>Notas</Text>
           <TextInput style={[styles.input, styles.multiline]} multiline value={notes} onChangeText={setNotes} placeholder="Notas internas (no públicas)" placeholderTextColor="rgba(255,255,255,0.4)" />
         </View>
-        <View style={[styles.cardAccent, { backgroundColor: '#B0B0B0' }]} />
+        <View style={[styles.cardAccent, { backgroundColor: '#00ca77' }]} />
       </View>
 
       {/* Frase + IA CTA */}
       <View style={[styles.fieldCard, { flexDirection: 'column', alignItems: 'stretch', marginTop: 16 }] }>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-          <View style={[styles.iconSquare, { backgroundColor: '#30D15820', borderColor: '#30D158', marginRight: 12 }]}> 
-            <Ionicons name="chatbubble-ellipses-outline" size={18} color="#30D158" />
+          <View style={[styles.iconSquare, { backgroundColor: '#00ca77', borderColor: '#00ca77', marginRight: 12 }]}> 
+            <Ionicons name="chatbubble-ellipses-outline" size={18} color="#ffffff" />
           </View>
           <Text style={styles.label}>Frase</Text>
           <TouchableOpacity 
@@ -1016,9 +1016,9 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
             disabled={generatingCTA}
           >
             {generatingCTA ? (
-              <ActivityIndicator size="small" color="#30D158" />
+              <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Ionicons name="sparkles-outline" size={16} color="#30D158" />
+              <Ionicons name="sparkles-outline" size={16} color="#FFFFFF" />
             )}
             <Text style={styles.aiBtnText}>
               {generatingCTA ? 'Generando...' : 'IA CTA'}
@@ -1282,8 +1282,8 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
 
       {/* Toggles generación */}
       <View style={[styles.fieldCard, { marginTop: 24 }]}>
-        <View style={[styles.iconSquare, { backgroundColor: '#A2845E20', borderColor: '#A2845E' }]}>
-          <Ionicons name="options-outline" size={18} color="#A2845E" />
+        <View style={[styles.iconSquare, { backgroundColor: '#00ca77', borderColor: '#00ca77' }]}>
+          <Ionicons name="options-outline" size={18} color="#ffffff" />
         </View>
         <View style={styles.fieldContent}>
           <View style={styles.toggleRow}>
@@ -1317,13 +1317,13 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
             </Text>
           </TouchableOpacity>
         </View>
-        <View style={[styles.cardAccent, { backgroundColor: '#A2845E' }]} />
+        <View style={[styles.cardAccent, { backgroundColor: '#00ca77' }]} />
       </View>
 
         {/* Campos del Blog Post */}
         <View style={styles.fieldCard}>
-          <View style={[styles.iconSquare, { backgroundColor: '#9A7AFF20', borderColor: '#9A7AFF' }]}> 
-            <Ionicons name="document-text-outline" size={18} color="#9A7AFF" />
+          <View style={[styles.iconSquare, { backgroundColor: '#00ca77', borderColor: '#00ca77' }]}> 
+            <Ionicons name="document-text-outline" size={18} color="#ffffff" />
           </View>
           <View style={styles.fieldContent}>
             <View style={styles.labelRow}>
@@ -1343,7 +1343,7 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
                   style={styles.infoButton}
                   onPress={() => setShowJsonModal(true)}
                 >
-                  <Ionicons name="information-circle-outline" size={20} color="#9A7AFF" />
+                  <Ionicons name="information-circle-outline" size={20} color="#00ca77" />
                 </TouchableOpacity>
               </View>
             </View>
@@ -1511,44 +1511,44 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
               />
             </View>
           </View>
-          <View style={[styles.cardAccent, { backgroundColor: '#9A7AFF' }]} />
+          <View style={[styles.cardAccent, { backgroundColor: '#00ca77' }]} />
         </View>
 
         {/* Contenidos editables */}
         {genLinkedin && (
           <View style={styles.fieldCard}>
-            <View style={[styles.iconSquare, { backgroundColor: '#0A66C220', borderColor: '#0A66C2' }]}>
-              <Ionicons name="logo-linkedin" size={18} color="#0A66C2" />
+            <View style={[styles.iconSquare, { backgroundColor: '#00ca77', borderColor: '#00ca77' }]}>
+              <Ionicons name="logo-linkedin" size={18} color="#ffffff" />
             </View>
             <View style={styles.fieldContent}>
               <Text style={styles.label}>LinkedIn</Text>
               <TextInput style={[styles.input, styles.multiline]} multiline value={linkedinText} onChangeText={setLinkedinText} />
             </View>
-            <View style={[styles.cardAccent, { backgroundColor: '#0A66C2' }]} />
+            <View style={[styles.cardAccent, { backgroundColor: '#00ca77' }]} />
           </View>
         )}
         {genInstagram && (
           <View style={styles.fieldCard}>
-            <View style={[styles.iconSquare, { backgroundColor: '#FF2D9220', borderColor: '#FF2D92' }]}>
-              <Ionicons name="logo-instagram" size={18} color="#FF2D92" />
+            <View style={[styles.iconSquare, { backgroundColor: '#00ca77', borderColor: '#00ca77' }]}>
+              <Ionicons name="logo-instagram" size={18} color="#ffffff" />
             </View>
             <View style={styles.fieldContent}>
               <Text style={styles.label}>Instagram</Text>
               <TextInput style={[styles.input, styles.multiline]} multiline value={instagramText} onChangeText={setInstagramText} />
             </View>
-            <View style={[styles.cardAccent, { backgroundColor: '#FF2D92' }]} />
+            <View style={[styles.cardAccent, { backgroundColor: '#00ca77' }]} />
           </View>
         )}
         {genTwitter && (
           <View style={styles.fieldCard}>
-            <View style={[styles.iconSquare, { backgroundColor: '#1DA1F220', borderColor: '#1DA1F2' }]}>
-              <Ionicons name="logo-twitter" size={18} color="#1DA1F2" />
+            <View style={[styles.iconSquare, { backgroundColor: '#00ca77', borderColor: '#00ca77' }]}>
+              <Ionicons name="logo-twitter" size={18} color="#ffffff" />
             </View>
             <View style={styles.fieldContent}>
               <Text style={styles.label}>Twitter</Text>
               <TextInput style={[styles.input, styles.multiline]} multiline value={twitterText} onChangeText={setTwitterText} />
             </View>
-            <View style={[styles.cardAccent, { backgroundColor: '#1DA1F2' }]} />
+            <View style={[styles.cardAccent, { backgroundColor: '#00ca77' }]} />
           </View>
         )}
       </View>
@@ -1569,11 +1569,13 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
           
           <View style={styles.connectedPlatforms}>
             <View style={[styles.platformIndicator, connectedPlatforms.instagram && styles.platformConnected]}>
-              <Ionicons 
-                name="logo-instagram" 
-                size={20} 
-                color={connectedPlatforms.instagram ? "#FF2D92" : "rgba(255,255,255,0.3)"} 
-              />
+              {connectedPlatforms.instagram ? (
+                <View style={styles.platformIconCircle}>
+                  <Ionicons name="logo-instagram" size={18} color="#FFFFFF" />
+                </View>
+              ) : (
+                <Ionicons name="logo-instagram" size={20} color="rgba(255,255,255,0.3)" />
+              )}
               <Text style={[styles.platformText, connectedPlatforms.instagram && styles.platformTextConnected]}>
                 Instagram
               </Text>
@@ -1583,11 +1585,13 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
             </View>
             
             <View style={[styles.platformIndicator, connectedPlatforms.twitter && styles.platformConnected]}>
-              <Ionicons 
-                name="logo-twitter" 
-                size={20} 
-                color={connectedPlatforms.twitter ? "#1DA1F2" : "rgba(255,255,255,0.3)"} 
-              />
+              {connectedPlatforms.twitter ? (
+                <View style={styles.platformIconCircle}>
+                  <Ionicons name="logo-twitter" size={18} color="#FFFFFF" />
+                </View>
+              ) : (
+                <Ionicons name="logo-twitter" size={20} color="rgba(255,255,255,0.3)" />
+              )}
               <Text style={[styles.platformText, connectedPlatforms.twitter && styles.platformTextConnected]}>
                 Twitter/X
               </Text>
@@ -1597,11 +1601,13 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
             </View>
             
             <View style={[styles.platformIndicator, connectedPlatforms.linkedin && styles.platformConnected]}>
-              <Ionicons 
-                name="logo-linkedin" 
-                size={20} 
-                color={connectedPlatforms.linkedin ? "#0A66C2" : "rgba(255,255,255,0.3)"} 
-              />
+              {connectedPlatforms.linkedin ? (
+                <View style={styles.platformIconCircle}>
+                  <Ionicons name="logo-linkedin" size={18} color="#FFFFFF" />
+                </View>
+              ) : (
+                <Ionicons name="logo-linkedin" size={20} color="rgba(255,255,255,0.3)" />
+              )}
               <Text style={[styles.platformText, connectedPlatforms.linkedin && styles.platformTextConnected]}>
                 LinkedIn
               </Text>
@@ -1827,11 +1833,18 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 16,
+    position: 'sticky',
+    top: 0,
+    zIndex: 10,
+    backgroundColor: '#333b4d',
+    paddingTop: 12,
   },
   backButton: {
-    padding: 8,
-    marginRight: 16,
+    padding: 10,
+    backgroundColor: '#00ca77',
+    borderRadius: 8,
   },
   headerContent: {
     flex: 1,
@@ -2053,20 +2066,24 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(48,209,88,0.5)',
-    backgroundColor: 'rgba(48,209,88,0.12)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
+    backgroundColor: '#00ca77',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 8,
+    shadowColor: '#00ca77',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 4,
   },
   aiBtnDisabled: {
     opacity: 0.6,
   },
   aiBtnText: {
-    color: '#30D158',
+    color: '#FFFFFF',
     marginLeft: 6,
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
   },
   toggleRow: {
@@ -2097,19 +2114,24 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   publishBtn: {
-    backgroundColor: '#ff6b6b',
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    backgroundColor: '#00ca77',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 8,
+    gap: 12,
+    shadowColor: '#00ca77',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   publishBtnText: {
     color: '#FFFFFF',
     fontWeight: '600',
-    fontSize: 16,
+    fontSize: 18,
   },
   socialInfoText: {
     color: 'rgba(255, 255, 255, 0.7)',
@@ -2579,18 +2601,23 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   draftBtn: {
-    backgroundColor: '#FF9800',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 10,
+    backgroundColor: '#00ca77',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 12,
+    shadowColor: '#00ca77',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   draftBtnText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
   },
   // Estilos para redes sociales
@@ -2611,7 +2638,7 @@ const styles = StyleSheet.create({
   socialMediaTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#00ca77',
   },
   refreshButton: {
     padding: 8,
@@ -2620,6 +2647,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     marginBottom: 20,
+  },
+  platformIconCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#00ca77',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   platformIndicator: {
     flexDirection: 'column',

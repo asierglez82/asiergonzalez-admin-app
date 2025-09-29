@@ -27,7 +27,9 @@ functions.http('socialCredentials', async (req, res) => {
   corsHandler(req, res, async () => {
     try {
       const { method } = req;
-      const { userId, platform, action } = req.body || req.query;
+      // Priorizar query en GET y body en el resto de métodos
+      const source = method === 'GET' ? (req.query || {}) : (req.body || {});
+      const { userId, platform, action } = source;
       console.log('[CF] ➡️ Incoming request', { method, userId, platform, action, hasBody: !!req.body });
 
       // Validación básica

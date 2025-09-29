@@ -295,11 +295,13 @@ const SettingsScreen = ({ navigation }) => {
             
             {/* Storage Type Indicator */}
             <View style={styles.storageIndicator}>
-              <Ionicons 
-                name={socialMediaConfig.useCloudStorage ? "cloud-outline" : "phone-portrait-outline"} 
-                size={16} 
-                color={socialMediaConfig.useCloudStorage ? "#64D2FF" : "#FF9800"} 
-              />
+              <View style={styles.storageIconCircle}>
+                <Ionicons 
+                  name={socialMediaConfig.useCloudStorage ? "cloud-outline" : "phone-portrait-outline"} 
+                  size={12} 
+                  color="#FFFFFF" 
+                />
+              </View>
               <Text style={styles.storageText}>
                 Almacenamiento: {socialMediaConfig.useCloudStorage ? "Google Cloud (Seguro)" : "Local (Dispositivo)"}
               </Text>
@@ -310,8 +312,8 @@ const SettingsScreen = ({ navigation }) => {
         {/* Instagram Card */}
         <View style={styles.socialCard}>
           <View style={styles.cardHeader}>
-            <View style={[styles.iconCircle, { backgroundColor: '#FF2D9220', borderColor: '#FF2D92' }]}>
-              <Ionicons name="logo-instagram" size={24} color="#FF2D92" />
+            <View style={[styles.iconCircle, styles.iconCircleGreen]}>
+              <Ionicons name="logo-instagram" size={24} color="#FFFFFF" />
             </View>
             <View style={styles.socialInfo}>
               <Text style={styles.socialName}>Instagram</Text>
@@ -320,10 +322,12 @@ const SettingsScreen = ({ navigation }) => {
               </Text>
             </View>
             <Switch
+              style={styles.switch}
               value={instagramConnected}
               onValueChange={setInstagramConnected}
-              trackColor={{ false: '#767577', true: '#FF2D9250' }}
-              thumbColor={instagramConnected ? '#FF2D92' : '#f4f3f4'}
+              trackColor={{ false: '#767577', true: '#767577' }}
+              ios_backgroundColor="#767577"
+              thumbColor={instagramConnected ? '#00ca77' : '#f4f3f4'}
             />
           </View>
 
@@ -381,8 +385,8 @@ const SettingsScreen = ({ navigation }) => {
         {/* Twitter/X Card */}
         <View style={styles.socialCard}>
           <View style={styles.cardHeader}>
-            <View style={[styles.iconCircle, { backgroundColor: '#1DA1F220', borderColor: '#1DA1F2' }]}>
-              <Ionicons name="logo-twitter" size={24} color="#1DA1F2" />
+            <View style={[styles.iconCircle, styles.iconCircleGreen]}>
+              <Ionicons name="logo-twitter" size={24} color="#FFFFFF" />
             </View>
             <View style={styles.socialInfo}>
               <Text style={styles.socialName}>Twitter / X</Text>
@@ -391,10 +395,12 @@ const SettingsScreen = ({ navigation }) => {
               </Text>
             </View>
             <Switch
+              style={styles.switch}
               value={twitterConnected}
               onValueChange={setTwitterConnected}
-              trackColor={{ false: '#767577', true: '#1DA1F250' }}
-              thumbColor={twitterConnected ? '#1DA1F2' : '#f4f3f4'}
+              trackColor={{ false: '#767577', true: '#767577' }}
+              ios_backgroundColor="#767577"
+              thumbColor={twitterConnected ? '#00ca77' : '#f4f3f4'}
             />
           </View>
 
@@ -486,8 +492,8 @@ const SettingsScreen = ({ navigation }) => {
         {/* LinkedIn Card */}
         <View style={styles.socialCard}>
           <View style={styles.cardHeader}>
-            <View style={[styles.iconCircle, { backgroundColor: '#0A66C220', borderColor: '#0A66C2' }]}>
-              <Ionicons name="logo-linkedin" size={24} color="#0A66C2" />
+            <View style={[styles.iconCircle, styles.iconCircleGreen]}>
+              <Ionicons name="logo-linkedin" size={24} color="#FFFFFF" />
             </View>
             <View style={styles.socialInfo}>
               <Text style={styles.socialName}>LinkedIn</Text>
@@ -496,36 +502,17 @@ const SettingsScreen = ({ navigation }) => {
               </Text>
             </View>
             <Switch
+              style={styles.switch}
               value={linkedinConnected}
               onValueChange={setLinkedinConnected}
-              trackColor={{ false: '#767577', true: '#0A66C250' }}
-              thumbColor={linkedinConnected ? '#0A66C2' : '#f4f3f4'}
+              trackColor={{ false: '#767577', true: '#767577' }}
+              ios_backgroundColor="#767577"
+              thumbColor={linkedinConnected ? '#00ca77' : '#f4f3f4'}
             />
           </View>
 
           {linkedinConnected && (
             <View style={styles.credentialsSection}>
-              <Text style={styles.credentialLabel}>Access Token</Text>
-              <TextInput
-                style={styles.credentialInput}
-                value={linkedinAccessToken ?? ''}
-                onChangeText={setLinkedinAccessToken}
-                placeholder="Tu access token de LinkedIn"
-                placeholderTextColor="rgba(255,255,255,0.4)"
-                secureTextEntry
-                autoCapitalize="none"
-              />
-
-              <Text style={styles.credentialLabel}>Person ID (URN)</Text>
-              <TextInput
-                style={styles.credentialInput}
-                value={linkedinPersonId ?? ''}
-                onChangeText={setLinkedinPersonId}
-                placeholder="Tu person ID de LinkedIn"
-                placeholderTextColor="rgba(255,255,255,0.4)"
-                autoCapitalize="none"
-              />
-
               {/* Componente de autorización de LinkedIn */}
               <LinkedInAuth
                 onAuthSuccess={handleLinkedInAuthSuccess}
@@ -563,7 +550,9 @@ const SettingsScreen = ({ navigation }) => {
         {/* Instrucciones */}
         <View style={styles.instructionsCard}>
           <View style={styles.instructionsHeader}>
-            <Ionicons name="information-circle-outline" size={24} color="#64D2FF" />
+            <View style={styles.instructionsIconCircle}>
+              <Ionicons name="information-circle-outline" size={16} color="#FFFFFF" />
+            </View>
             <Text style={styles.instructionsTitle}>Cómo obtener las credenciales</Text>
           </View>
           
@@ -629,7 +618,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#00ca77',
     letterSpacing: -0.3,
   },
   subtitle: {
@@ -637,6 +626,24 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.6)',
     marginTop: 6,
     lineHeight: 20,
+  },
+  storageIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    gap: 6,
+  },
+  storageIconCircle: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#00ca77',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  storageText: {
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 13,
   },
   socialCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
@@ -659,6 +666,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     marginRight: 16,
+  },
+  iconCircleGreen: {
+    backgroundColor: '#00ca77',
+    borderColor: '#00ca77',
   },
   socialInfo: {
     flex: 1,
@@ -736,22 +747,30 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   instructionsCard: {
-    backgroundColor: 'rgba(100, 210, 255, 0.08)',
+    backgroundColor: 'rgba(0, 202, 119, 0.08)',
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: 'rgba(100, 210, 255, 0.2)',
+    borderColor: 'rgba(0, 202, 119, 0.2)',
   },
   instructionsHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 16,
   },
+  instructionsIconCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#00ca77',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   instructionsTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#00ca77',
     marginLeft: 12,
   },
   instructionsList: {
@@ -760,7 +779,7 @@ const styles = StyleSheet.create({
   instructionsSubtitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#64D2FF',
+    color: '#00ca77',
     marginBottom: 8,
   },
   instructionsText: {

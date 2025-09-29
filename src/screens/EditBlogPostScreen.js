@@ -45,6 +45,11 @@ const EditBlogPostScreen = ({ navigation, route }) => {
       genTwitter: false
     }
   });
+  const [publishedStatus, setPublishedStatus] = useState({
+    linkedin: false,
+    instagram: false,
+    twitter: false,
+  });
   
   // Form fields - actualizados para coincidir con Firebase
   const [formData, setFormData] = useState({
@@ -101,6 +106,11 @@ const EditBlogPostScreen = ({ navigation, route }) => {
             genInstagram: data.socialMedia.settings?.genInstagram !== false,
             genTwitter: data.socialMedia.settings?.genTwitter || false
           }
+        });
+        setPublishedStatus({
+          linkedin: !!data.socialMedia?.published?.linkedin,
+          instagram: !!data.socialMedia?.published?.instagram,
+          twitter: !!data.socialMedia?.published?.twitter,
         });
       }
       
@@ -175,7 +185,7 @@ const EditBlogPostScreen = ({ navigation, route }) => {
         draft: isDraft,
         updatedAt: new Date(),
         // Incluir datos de redes sociales
-        socialMedia: socialMediaData
+        socialMedia: { ...socialMediaData, published: publishedStatus }
       };
 
       await blogPostsService.update(postId, updateData);
@@ -208,7 +218,7 @@ const EditBlogPostScreen = ({ navigation, route }) => {
         ...formData,
         draft: false, // Marcar como publicado
         updatedAt: new Date(),
-        socialMedia: socialMediaData
+        socialMedia: { ...socialMediaData, published: publishedStatus }
       };
 
       await blogPostsService.update(postId, updateData);
@@ -312,6 +322,11 @@ const EditBlogPostScreen = ({ navigation, route }) => {
             genTwitter: post.socialMedia.settings?.genTwitter || false
           }
         });
+        setPublishedStatus({
+          linkedin: !!post.socialMedia?.published?.linkedin,
+          instagram: !!post.socialMedia?.published?.instagram,
+          twitter: !!post.socialMedia?.published?.twitter,
+        });
       }
     }
     Alert.alert('Cambios deshechos', 'Se han restaurado los valores originales del post');
@@ -338,12 +353,6 @@ const EditBlogPostScreen = ({ navigation, route }) => {
     <View style={styles.container}>
       {/* Header */}
       <View style={[styles.header, isTablet && styles.headerTablet, isMobile && styles.headerMobile]}>
-        <TouchableOpacity 
-          style={[styles.backButton, isTablet && styles.backButtonTablet, isMobile && styles.backButtonMobile]}
-          onPress={handleBack}
-        >
-          <Ionicons name="arrow-back" size={isTablet ? 28 : 24} color="#FFFFFF" />
-        </TouchableOpacity>
         <View style={[styles.headerContent, isTablet && styles.headerContentTablet, isMobile && styles.headerContentMobile]}>
           <Text style={[styles.title, isTablet && styles.titleTablet, isMobile && styles.titleMobile]}>
             Editar Post del Blog
@@ -369,6 +378,12 @@ const EditBlogPostScreen = ({ navigation, route }) => {
             ) : (
               <Ionicons name="checkmark" size={isTablet ? 28 : 24} color="#FFFFFF" />
             )}
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.iconHeaderButton, isTablet && styles.iconHeaderButtonTablet, isMobile && styles.iconHeaderButtonMobile]}
+            onPress={handleBack}
+          >
+            <Ionicons name="arrow-back" size={isTablet ? 24 : 20} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
       </View>
@@ -460,6 +475,7 @@ const EditBlogPostScreen = ({ navigation, route }) => {
               {isDraft ? 'El post está en borrador y no se muestra en la web' : 'El post está publicado y es visible en la web'}
             </Text>
           </View>
+          <View style={styles.cardAccent} />
         </View>
 
         {/* Contenido */}
@@ -480,6 +496,7 @@ const EditBlogPostScreen = ({ navigation, route }) => {
               numberOfLines={12}
             />
           </View>
+          <View style={styles.cardAccent} />
         </View>
 
         {/* URLs e imágenes */}
@@ -553,6 +570,7 @@ const EditBlogPostScreen = ({ navigation, route }) => {
               placeholderTextColor="rgba(255, 255, 255, 0.5)"
             />
           </View>
+          <View style={styles.cardAccent} />
         </View>
 
         {/* Sección de redes sociales */}
@@ -618,9 +636,33 @@ const EditBlogPostScreen = ({ navigation, route }) => {
           {/* Campos de contenido para redes sociales */}
           {socialMediaData.settings.genLinkedin && (
             <View style={styles.inputGroup}>
-              <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>
-                Contenido LinkedIn
-              </Text>
+              <View style={styles.socialFieldHeader}>
+                <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Contenido LinkedIn</Text>
+                <View style={styles.socialActionsRow}>
+                  {publishedStatus.linkedin && (
+                    <View style={styles.publishedChip}>
+                      <Ionicons name="checkmark-circle" size={14} color="#FFFFFF" />
+                      <Text style={styles.publishedChipText}>Publicado</Text>
+                    </View>
+                  )}
+                  <TouchableOpacity 
+                    style={[styles.postBtn, publishedStatus.linkedin && styles.postBtnDisabled]}
+                    onPress={async () => {
+                      const res = await socialMediaService.publishToLinkedIn(socialMediaData.linkedin, formData.image);
+                      if (res.success) {
+                        setPublishedStatus(prev => ({ ...prev, linkedin: true }));
+                        Alert.alert('Éxito', 'Publicado en LinkedIn');
+                      } else {
+                        Alert.alert('Error', res.error || 'No se pudo publicar en LinkedIn');
+                      }
+                    }}
+                    disabled={publishedStatus.linkedin}
+                  >
+                    <Ionicons name="send-outline" size={16} color="#FFFFFF" />
+                    <Text style={styles.postBtnText}>{publishedStatus.linkedin ? 'Publicado' : 'Publicar'}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
               <TextInput
                 style={[styles.textArea, isTablet && styles.textAreaTablet, isMobile && styles.textAreaMobile]}
                 value={socialMediaData.linkedin}
@@ -635,9 +677,33 @@ const EditBlogPostScreen = ({ navigation, route }) => {
           
           {socialMediaData.settings.genInstagram && (
             <View style={styles.inputGroup}>
-              <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>
-                Contenido Instagram
-              </Text>
+              <View style={styles.socialFieldHeader}>
+                <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Contenido Instagram</Text>
+                <View style={styles.socialActionsRow}>
+                  {publishedStatus.instagram && (
+                    <View style={styles.publishedChip}>
+                      <Ionicons name="checkmark-circle" size={14} color="#FFFFFF" />
+                      <Text style={styles.publishedChipText}>Publicado</Text>
+                    </View>
+                  )}
+                  <TouchableOpacity 
+                    style={[styles.postBtn, publishedStatus.instagram && styles.postBtnDisabled]}
+                    onPress={async () => {
+                      const res = await socialMediaService.publishToInstagram(socialMediaData.instagram, formData.image);
+                      if (res.success) {
+                        setPublishedStatus(prev => ({ ...prev, instagram: true }));
+                        Alert.alert('Éxito', 'Publicado en Instagram');
+                      } else {
+                        Alert.alert('Error', res.error || 'No se pudo publicar en Instagram');
+                      }
+                    }}
+                    disabled={publishedStatus.instagram}
+                  >
+                    <Ionicons name="send-outline" size={16} color="#FFFFFF" />
+                    <Text style={styles.postBtnText}>{publishedStatus.instagram ? 'Publicado' : 'Publicar'}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
               <TextInput
                 style={[styles.textArea, isTablet && styles.textAreaTablet, isMobile && styles.textAreaMobile]}
                 value={socialMediaData.instagram}
@@ -652,9 +718,33 @@ const EditBlogPostScreen = ({ navigation, route }) => {
           
           {socialMediaData.settings.genTwitter && (
             <View style={styles.inputGroup}>
-              <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>
-                Contenido Twitter/X
-              </Text>
+              <View style={styles.socialFieldHeader}>
+                <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Contenido Twitter/X</Text>
+                <View style={styles.socialActionsRow}>
+                  {publishedStatus.twitter && (
+                    <View style={styles.publishedChip}>
+                      <Ionicons name="checkmark-circle" size={14} color="#FFFFFF" />
+                      <Text style={styles.publishedChipText}>Publicado</Text>
+                    </View>
+                  )}
+                  <TouchableOpacity 
+                    style={[styles.postBtn, publishedStatus.twitter && styles.postBtnDisabled]}
+                    onPress={async () => {
+                      const res = await socialMediaService.publishToTwitter(socialMediaData.twitter);
+                      if (res.success) {
+                        setPublishedStatus(prev => ({ ...prev, twitter: true }));
+                        Alert.alert('Éxito', 'Publicado en Twitter/X');
+                      } else {
+                        Alert.alert('Error', res.error || 'No se pudo publicar en Twitter/X');
+                      }
+                    }}
+                    disabled={publishedStatus.twitter}
+                  >
+                    <Ionicons name="send-outline" size={16} color="#FFFFFF" />
+                    <Text style={styles.postBtnText}>{publishedStatus.twitter ? 'Publicado' : 'Publicar'}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
               <TextInput
                 style={[styles.textArea, isTablet && styles.textAreaTablet, isMobile && styles.textAreaMobile]}
                 value={socialMediaData.twitter}
@@ -666,23 +756,11 @@ const EditBlogPostScreen = ({ navigation, route }) => {
               />
             </View>
           )}
-          
-          <Text style={styles.socialInfoText}>
-            ℹ️ Al usar "Publicar", el post se actualizará en la web y también se publicará en las redes sociales conectadas automáticamente.
-          </Text>
+          <View style={styles.cardAccent} />
         </View>
 
         {/* Botones de acción */}
         <View style={styles.actionButtons}>
-          <TouchableOpacity 
-            style={[styles.saveButton, saving && styles.saveButtonDisabled]} 
-            onPress={handleSave} 
-            disabled={saving}
-          >
-            <Ionicons name="save-outline" size={18} color="#FFFFFF" />
-            <Text style={styles.saveButtonText}>{saving ? 'Guardando...' : 'Guardar Cambios'}</Text>
-          </TouchableOpacity>
-          
           {isDraft && (
             <TouchableOpacity 
               style={[styles.publishButton, saving && styles.publishButtonDisabled]} 
@@ -720,8 +798,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 24,
     paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
   backButton: {
     padding: 8,
@@ -733,7 +809,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#00ca77',
     marginBottom: 4,
   },
   subtitle: {
@@ -745,15 +821,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
+  iconHeaderButton: {
+    padding: 10,
+    backgroundColor: '#00ca77',
+    borderRadius: 8,
+  },
+  iconHeaderButtonTablet: {
+    padding: 12,
+    borderRadius: 10,
+  },
+  iconHeaderButtonMobile: {
+    padding: 8,
+    borderRadius: 6,
+  },
   cancelButton: {
     backgroundColor: '#FF9800',
     borderRadius: 8,
-    padding: 12,
+    padding: 10,
   },
   saveButton: {
     backgroundColor: '#00ca77',
     borderRadius: 8,
-    padding: 12,
+    padding: 10,
   },
   saveButtonDisabled: {
     backgroundColor: 'rgba(0, 202, 119, 0.5)',
@@ -766,15 +855,73 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: 32,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    position: 'relative',
+  },
+  cardAccent: {
+    position: 'absolute',
+    right: 0,
+    top: 8,
+    bottom: 8,
+    width: 3,
+    backgroundColor: '#00ca77',
+    borderTopRightRadius: 12,
+    borderBottomRightRadius: 12,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#00ca77',
     marginBottom: 20,
   },
   inputGroup: {
     marginBottom: 20,
+  },
+  socialFieldHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  socialActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  publishedChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#00ca77',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  publishedChipText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  postBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#00ca77',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    gap: 6,
+  },
+  postBtnDisabled: {
+    opacity: 0.6,
+  },
+  postBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
   },
   label: {
     fontSize: 16,
@@ -808,8 +955,7 @@ const styles = StyleSheet.create({
   // Responsive styles for tablets (768px+)
   scrollContentTablet: {
     padding: 32,
-    maxWidth: 1200,
-    alignSelf: 'center',
+    alignSelf: 'stretch',
     width: '100%',
   },
   headerTablet: {
@@ -831,12 +977,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   cancelButtonTablet: {
-    padding: 16,
-    borderRadius: 12,
+    padding: 12,
+    borderRadius: 10,
   },
   saveButtonTablet: {
-    padding: 16,
-    borderRadius: 12,
+    padding: 12,
+    borderRadius: 10,
   },
   sectionTablet: {
     marginBottom: 40,
@@ -1034,10 +1180,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   saveButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
+    display: 'none',
   },
   publishButton: {
     backgroundColor: '#ff6b6b',

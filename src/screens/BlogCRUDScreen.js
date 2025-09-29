@@ -241,7 +241,7 @@ const BlogCRUDScreen = ({ navigation }) => {
               navigation.navigate('EditBlogPost', { postId: post.id });
             }}
           >
-            <Ionicons name="create-outline" size={isTablet ? 20 : 16} color="#007AFF" />
+            <Ionicons name="create-outline" size={isTablet ? 20 : 16} color="#B0B0B0" />
           </TouchableOpacity>
           <TouchableOpacity 
             style={[
@@ -259,6 +259,7 @@ const BlogCRUDScreen = ({ navigation }) => {
             <Ionicons name="trash-outline" size={isTablet ? 20 : 16} color="#FF3B30" />
           </TouchableOpacity>
         </View>
+        <View style={styles.cardAccent} />
       </View>
     );
   };
@@ -286,16 +287,6 @@ const BlogCRUDScreen = ({ navigation }) => {
         isTablet && styles.headerTablet,
         isMobile && styles.headerMobile
       ]}>
-        <TouchableOpacity 
-          style={[
-            styles.backButton,
-            isTablet && styles.backButtonTablet,
-            isMobile && styles.backButtonMobile
-          ]}
-          onPress={() => navigation.navigate('ContentEditor')}
-        >
-          <Ionicons name="arrow-back" size={isTablet ? 28 : 24} color="#FFFFFF" />
-        </TouchableOpacity>
         <View style={[
           styles.headerContent,
           isTablet && styles.headerContentTablet,
@@ -312,16 +303,28 @@ const BlogCRUDScreen = ({ navigation }) => {
             isMobile && styles.subtitleMobile
           ]}>{filteredBlogPosts.length} posts encontrados</Text>
         </View>
-        <TouchableOpacity 
-          style={[
-            styles.addButton,
-            isTablet && styles.addButtonTablet,
-            isMobile && styles.addButtonMobile
-          ]}
-          onPress={() => navigation.navigate('CreatePost')}
-        >
-          <Ionicons name="add" size={isTablet ? 28 : 24} color="#FFFFFF" />
-        </TouchableOpacity>
+        <View style={styles.rightButtons}>
+          <TouchableOpacity 
+            style={[
+              styles.iconHeaderButton,
+              isTablet && styles.iconHeaderButtonTablet,
+              isMobile && styles.iconHeaderButtonMobile
+            ]}
+            onPress={() => navigation.navigate('CreatePost')}
+          >
+            <Ionicons name="add" size={isTablet ? 24 : 20} color="#FFFFFF" />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[
+              styles.iconHeaderButton,
+              isTablet && styles.iconHeaderButtonTablet,
+              isMobile && styles.iconHeaderButtonMobile
+            ]}
+            onPress={() => navigation.navigate('ContentEditor')}
+          >
+            <Ionicons name="arrow-back" size={isTablet ? 24 : 20} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={[
@@ -499,10 +502,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 24,
+    position: 'sticky',
+    top: 0,
+    zIndex: 10,
+    backgroundColor: '#333b4d',
+    paddingTop: 12,
+  },
+  rightButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   backButton: {
+    padding: 10,
+    backgroundColor: '#00ca77',
+    borderRadius: 8,
+  },
+  iconHeaderButton: {
+    padding: 10,
+    backgroundColor: '#00ca77',
+    borderRadius: 8,
+  },
+  iconHeaderButtonTablet: {
+    padding: 12,
+    borderRadius: 10,
+  },
+  iconHeaderButtonMobile: {
     padding: 8,
-    marginRight: 16,
+    borderRadius: 6,
   },
   headerContent: {
     flex: 1,
@@ -510,7 +537,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#00ca77',
     marginBottom: 4,
   },
   subtitle: {
@@ -524,6 +551,7 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     marginBottom: 24,
+    alignItems: 'stretch',
   },
   searchInputContainer: {
     flexDirection: 'row',
@@ -533,6 +561,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
+    alignSelf: 'stretch',
   },
   searchIcon: {
     marginRight: 12,
@@ -545,6 +574,7 @@ const styles = StyleSheet.create({
   },
   blogPostsList: {
     gap: 16,
+    alignItems: 'stretch',
   },
   blogPostCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
@@ -554,6 +584,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
+    position: 'relative',
+    width: '100%',
+  },
+  cardAccent: {
+    position: 'absolute',
+    right: 0,
+    top: 8,
+    bottom: 8,
+    width: 3,
+    backgroundColor: '#00ca77',
+    borderTopRightRadius: 12,
+    borderBottomRightRadius: 12,
   },
   blogPostImageContainer: {
     width: 60,
@@ -599,7 +641,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   publishedBadge: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#00ca77',
   },
   draftBadge: {
     backgroundColor: '#FF9800',
@@ -617,7 +659,7 @@ const styles = StyleSheet.create({
   },
   blogPostContent: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#00ca77',
     marginBottom: 4,
     lineHeight: 16,
   },
@@ -642,9 +684,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   editButton: {
-    backgroundColor: 'rgba(0, 122, 255, 0.2)',
+    backgroundColor: 'rgba(176, 176, 176, 0.15)',
     borderWidth: 1,
-    borderColor: '#007AFF',
+    borderColor: 'rgba(176, 176, 176, 0.5)',
   },
   deleteButton: {
     backgroundColor: 'rgba(255, 59, 48, 0.2)',
@@ -672,8 +714,7 @@ const styles = StyleSheet.create({
   // Responsive styles for tablets (768px+)
   scrollContentTablet: {
     padding: 32,
-    maxWidth: 1200,
-    alignSelf: 'center',
+    alignSelf: 'stretch',
     width: '100%',
   },
   headerTablet: {
@@ -711,11 +752,13 @@ const styles = StyleSheet.create({
   },
   blogPostsListTablet: {
     gap: 20,
+    alignItems: 'stretch',
   },
   blogPostCardTablet: {
     padding: 20,
     borderRadius: 16,
     marginBottom: 16,
+    width: '100%',
   },
   blogPostImageContainerTablet: {
     width: 80,
@@ -741,6 +784,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 6,
     lineHeight: 20,
+    color: '#00ca77',
   },
   blogPostTagsTablet: {
     fontSize: 14,
@@ -809,11 +853,13 @@ const styles = StyleSheet.create({
   },
   blogPostsListMobile: {
     gap: 12,
+    alignItems: 'stretch',
   },
   blogPostCardMobile: {
     padding: 12,
     borderRadius: 8,
     marginBottom: 8,
+    width: '100%',
   },
   blogPostImageContainerMobile: {
     width: 50,
@@ -839,6 +885,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginBottom: 4,
     lineHeight: 14,
+    color: '#00ca77',
   },
   blogPostTagsMobile: {
     fontSize: 11,

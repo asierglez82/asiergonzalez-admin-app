@@ -24,27 +24,27 @@ const ContentEditorScreen = ({ navigation }) => {
 
   const ActionCard = ({ title, description, color, icon, onPress }) => (
     <TouchableOpacity style={[styles.actionCard, { width: actionCardWidth }]} onPress={onPress}>
-      <View style={[styles.iconSquare, { backgroundColor: `${color}20`, borderColor: color }] }>
-        <Ionicons name={icon} size={18} color={color} />
+      <View style={[styles.iconSquare, { backgroundColor: '#00ca77', borderColor: '#00ca77' }] }>
+        <Ionicons name={icon} size={18} color={'#ffffff'} />
       </View>
       <View style={styles.actionContent}>
         <Text style={styles.cardTitle}>{title}</Text>
         <Text style={styles.cardDescription}>{description}</Text>
       </View>
-      <View style={[styles.cardAccent, { backgroundColor: color }]} />
+      <View style={[styles.cardAccent, { backgroundColor: '#00ca77' }]} />
     </TouchableOpacity>
   );
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       <View style={styles.header}>
-        <Text style={styles.title}>Editor de Contenido</Text>
+        <Text style={[styles.title, { color: '#00ca77' }]}>Editor de Contenido</Text>
         <Text style={styles.subtitle}>Crear y editar posts, proyectos y más</Text>
       </View>
 
       {/* Sección de Creación */}
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Crear Contenido</Text>
+        <Text style={[styles.sectionTitle, { color: '#00ca77' }]}>Crear Contenido</Text>
         <Text style={styles.sectionSubtitle}>Crear nuevos elementos de contenido</Text>
       </View>
 
@@ -116,7 +116,7 @@ const ContentEditorScreen = ({ navigation }) => {
 
       {/* Sección de Gestión */}
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Gestionar Contenido</Text>
+        <Text style={[styles.sectionTitle, { color: '#00ca77' }]}>Gestionar Contenido</Text>
         <Text style={styles.sectionSubtitle}>Editar y administrar contenido existente</Text>
       </View>
 
@@ -199,6 +199,11 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 32,
+    position: 'sticky',
+    top: 0,
+    zIndex: 10,
+    backgroundColor: '#333b4d',
+    paddingTop: 12,
   },
   title: {
     fontSize: 32,

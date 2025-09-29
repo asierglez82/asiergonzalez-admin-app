@@ -1,8 +1,10 @@
 // Servicio de redes sociales usando Google Cloud Functions y Secret Manager
 import { useAuth } from '../context/AuthContext';
 
-// URL de la Cloud Function (actualizar después del despliegue)
-const CLOUD_FUNCTION_URL = process.env.EXPO_PUBLIC_CLOUD_FUNCTION_URL || 'https://europe-west1-asiergonzalez-web-app.cloudfunctions.net/socialCredentials';
+// URL de la Cloud Function (normalizada a kebab-case)
+const RAW_CF_URL = process.env.EXPO_PUBLIC_CLOUD_FUNCTION_URL || 'https://europe-west1-asiergonzalez-web-app.cloudfunctions.net/social-credentials';
+const CLOUD_FUNCTION_URL = RAW_CF_URL.replace('socialCredentials', 'social-credentials');
+console.log('[socialMediaCloud] 🌐 CF URL en uso:', CLOUD_FUNCTION_URL);
 
 export const socialMediaCloudService = {
   
@@ -25,7 +27,7 @@ export const socialMediaCloudService = {
   // Realizar request a la Cloud Function
   async makeCloudRequest(method, endpoint = '', body = null) {
     try {
-      const url = `${CLOUD_FUNCTION_URL}${endpoint}`;
+      let url = `${CLOUD_FUNCTION_URL}${endpoint}`;
       console.log('[socialMediaCloud] ▶️ Request', { method, url, hasBody: !!body, action: body?.action, platform: body?.platform });
       const config = {
         method,
@@ -38,7 +40,18 @@ export const socialMediaCloudService = {
         config.body = JSON.stringify(body);
       }
 
-      const response = await fetch(url, config);
+      let response = await fetch(url, config);
+      // Fallback automático: si la URL legacy estuviera en caché, prueba variante kebab/camel
+      if (!response.ok && (response.status === 404 || response.status === 400)) {
+        const altUrl = url.includes('social-credentials')
+          ? url.replace('social-credentials', 'socialCredentials')
+          : url.replace('socialCredentials', 'social-credentials');
+        if (altUrl !== url) {
+          console.log('[socialMediaCloud] 🔁 Reintentando con URL alternativa:', altUrl);
+          response = await fetch(altUrl, config);
+          url = altUrl;
+        }
+      }
       console.log('[socialMediaCloud] ◀️ Response', { status: response.status, statusText: response.statusText });
       
       if (!response.ok) {

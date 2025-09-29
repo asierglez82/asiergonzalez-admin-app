@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Image, Linking } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 
 const Sidebar = ({ navigation, state }) => {
@@ -68,30 +68,15 @@ const Sidebar = ({ navigation, state }) => {
         {/* Header Elegante */}
         <View style={styles.header}>
           <View style={styles.brandContainer}>
-            <View style={styles.logoContainer}>
-              <Text style={styles.brandName}>AG</Text>
-            </View>
-            <View style={styles.brandInfo}>
-              <Text style={styles.brandTitle}>Asier González</Text>
-              <Text style={styles.brandSubtitle}>Digital Command Center</Text>
-            </View>
+            <Image source={require('../../assets/logo.png')} style={styles.brandLogo} resizeMode="contain" />
           </View>
         </View>
 
-        {/* Usuario */}
+        {/* Usuario (solo estado online) */}
         <View style={styles.userSection}>
-          <View style={styles.userAvatar}>
-            <Text style={styles.userInitials}>
-              {(user?.displayName || user?.email || 'Admin').charAt(0).toUpperCase()}
-            </Text>
-          </View>
-          <View style={styles.userDetails}>
-            <Text style={styles.userName}>{user?.displayName || 'Administrator'}</Text>
-            <Text style={styles.userRole}>Content Manager</Text>
-            <View style={styles.statusIndicator}>
-              <View style={styles.onlineStatus} />
-              <Text style={styles.statusText}>Online</Text>
-            </View>
+          <View style={styles.statusIndicator}>
+            <View style={styles.onlineStatus} />
+            <Text style={styles.statusText}>Online</Text>
           </View>
         </View>
 
@@ -167,10 +152,10 @@ const Sidebar = ({ navigation, state }) => {
         {/* Quick Actions */}
         <View style={styles.quickActions}>
           <Text style={styles.sectionLabel}>QUICK ACTIONS</Text>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('CreatePost')}>
             <Text style={styles.actionText}>New Post</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity style={styles.actionButton} onPress={() => Linking.openURL('https://asiergonzalez.es')}>
             <Text style={styles.actionText}>View Website</Text>
           </TouchableOpacity>
         </View>
@@ -198,11 +183,16 @@ const styles = StyleSheet.create({
   header: {
     padding: 24,
     paddingBottom: 24,
-    backgroundColor: 'rgba(0, 202, 119, 0.1)',
+    backgroundColor: 'transparent',
   },
   brandContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  brandLogo: {
+    width: 230,
+    height: 60,
   },
   logoContainer: {
     width: 48,
@@ -242,13 +232,11 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   userSection: {
-    padding: 20,
-    marginVertical: 12,
-    marginHorizontal: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 12,
-    borderLeftWidth: 3,
-    borderLeftColor: '#00ca77',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginVertical: 8,
+    backgroundColor: 'transparent',
+    alignItems: 'center',
   },
   userAvatar: {
     width: 36,

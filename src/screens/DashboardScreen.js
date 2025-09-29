@@ -9,6 +9,7 @@ import {
   Dimensions
 } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { 
   blogPostsService, 
   projectsService, 
@@ -143,27 +144,57 @@ const DashboardScreen = ({ navigation }) => {
     }
   };
 
+  const getGradientColors = (base) => {
+    switch (base) {
+      case '#30D158': // green
+        return ['#27c651', '#44e07a'];
+      case '#007AFF': // blue
+        return ['#336dff', '#6aa0ff'];
+      case '#FF9F0A': // orange
+        return ['#ff8a00', '#ffb347'];
+      case '#FF2D92': // pink
+        return ['#d72682', '#ff67b3'];
+      case '#5856D6': // purple
+        return ['#4f4ccf', '#8b88ff'];
+      case '#FF3B30': // red
+        return ['#ff3b30', '#ff7a73'];
+      default:
+        return [base, base];
+    }
+  };
+
   const MetricCard = ({ title, value, color, icon }) => (
-    <View style={[styles.metricCard, { width: metricCardWidth }]}>
-      <View style={[styles.iconCircle, { backgroundColor: `${color}20` }]}>
-        <Feather name={icon} size={18} color="#ffffff" />
-      </View>
-      <Text style={styles.metricValue}>{value}</Text>
-      <Text style={styles.metricTitle}>{title}</Text>
-      <View style={[styles.metricAccent, { backgroundColor: color }]} />
+    <View style={[styles.metricCard, { width: metricCardWidth }]}> 
+      <LinearGradient
+        colors={getGradientColors(color)}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.metricGradient}
+      >
+        <View style={styles.metricDecorContainer}>
+          <View style={styles.metricCircleLg} />
+          <View style={styles.metricCircleMd} />
+          <View style={styles.metricCircleSm} />
+        </View>
+        <View style={styles.metricHeader}> 
+          <Text style={styles.metricHeaderTitle}>{title}</Text>
+          <Feather name={icon} size={18} color={'#ffffff'} style={styles.metricIcon} /> 
+        </View>
+        <Text style={styles.metricValueLarge}>{value}</Text>
+      </LinearGradient>
     </View>
   );
 
   const ActionCard = ({ title, subtitle, color, icon, onPress }) => (
     <TouchableOpacity style={[styles.actionCard, { width: actionCardWidth }]} onPress={onPress}>
-      <View style={[styles.iconSquare, { backgroundColor: `${color}20`, borderColor: color }] }>
-        <Ionicons name={icon} size={18} color={color} />
+      <View style={[styles.iconSquare, { backgroundColor: '#00ca77', borderColor: '#00ca77' }] }>
+        <Ionicons name={icon} size={18} color={'#ffffff'} />
       </View>
       <View style={styles.actionContent}>
         <Text style={styles.actionTitle}>{title}</Text>
         <Text style={styles.actionSubtitle}>{subtitle}</Text>
       </View>
-      <View style={[styles.cardAccent, { backgroundColor: color }]} />
+      <View style={[styles.cardAccent, { backgroundColor: '#00ca77' }]} />
     </TouchableOpacity>
   );
 
@@ -180,8 +211,8 @@ const DashboardScreen = ({ navigation }) => {
 
   const RecentContentItem = ({ item }) => (
     <View style={styles.contentItem}>
-      <View style={[styles.iconCircleSm, { backgroundColor: `${getTypeColor(item.type)}20` }] }>
-        <Feather name={getTypeIcon(item.type)} size={16} color={getTypeColor(item.type)} />
+      <View style={[styles.iconCircleSm, { backgroundColor: '#00ca77' }] }>
+        <Feather name={getTypeIcon(item.type)} size={16} color={'#ffffff'} />
       </View>
       <View style={styles.contentInfo}>
         <Text style={styles.contentTitle} numberOfLines={2}>
@@ -229,7 +260,7 @@ const DashboardScreen = ({ navigation }) => {
 
       {/* Quick Actions */}
       <View style={styles.actionsContainer}>
-        <Text style={styles.sectionTitle}>Acciones Rápidas</Text>
+        <Text style={[styles.sectionTitle, { color: '#00ca77' }]}>Acciones Rápidas</Text>
         <View style={styles.actionsGrid}>
           <ActionCard 
             title="Crear Contenido"
@@ -250,7 +281,7 @@ const DashboardScreen = ({ navigation }) => {
 
       {/* Recent Content */}
       <View style={styles.recentContainer}>
-        <Text style={styles.sectionTitle}>Contenido Reciente</Text>
+        <Text style={[styles.sectionTitle, { color: '#00ca77' }]}>Contenido Reciente</Text>
         {recentContent.map((item, index) => (
           <RecentContentItem key={`${item.type}-${index}`} item={item} />
         ))}
@@ -291,7 +322,7 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 32,
     fontWeight: '700',
-    color: '#ffffff',
+    color: '#00ca77',
     letterSpacing: -0.5,
     marginBottom: 8,
   },
@@ -319,19 +350,75 @@ const styles = StyleSheet.create({
     marginRight: -6,
   },
   metricCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'transparent',
     borderRadius: 12,
-    padding: 16,
+    padding: 0,
     marginHorizontal: 6,
     marginBottom: 12,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 202, 119, 0.2)',
-    shadowColor: '#00ca77',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 4,
+  },
+  metricGradient: {
+    width: '100%',
+    borderRadius: 12,
+    padding: 16,
+    overflow: 'hidden',
+  },
+  metricDecorContainer: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  metricCircleLg: {
+    position: 'absolute',
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    bottom: -60,
+    right: -40,
+  },
+  metricCircleMd: {
+    position: 'absolute',
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    top: -40,
+    right: -20,
+  },
+  metricCircleSm: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    bottom: 20,
+    left: -30,
+  },
+  metricHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  metricHeaderTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#ffffff',
+    letterSpacing: 0.2,
+  },
+  metricIcon: {
+    opacity: 0.9,
+  },
+  metricValueLarge: {
+    fontSize: 48,
+    fontWeight: '700',
+    color: '#ffffff',
+    marginTop: 12,
+    marginBottom: 4,
+    letterSpacing: 0.5,
   },
   iconCircle: {
     width: 28,
