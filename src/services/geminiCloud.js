@@ -1,6 +1,6 @@
 // Servicio de Gemini usando Google Cloud Functions y Secret Manager
 // URL de la Cloud Function (actualizar después del despliegue)
-const GEMINI_CLOUD_FUNCTION_URL = process.env.EXPO_PUBLIC_GEMINI_CLOUD_FUNCTION_URL || 'https://europe-west1-tu-project-id.cloudfunctions.net/gemini-proxy';
+const GEMINI_CLOUD_FUNCTION_URL = process.env.EXPO_PUBLIC_GEMINI_CLOUD_FUNCTION_URL || 'https://europe-west1-asiergonzalez-web-app.cloudfunctions.net/geminiProxy';
 
 export const geminiCloudService = {
   
@@ -8,7 +8,7 @@ export const geminiCloudService = {
   async makeGeminiRequest(prompt, options = {}) {
     try {
       const {
-        model = 'gemini-2.5-flash',
+        model = 'gemini-2.5-flash-lite',
         system = null,
         temperature = 0.7,
         maxOutputTokens = 2048,
@@ -71,7 +71,7 @@ export const geminiCloudService = {
   // Verificar salud del servicio cloud
   async checkGeminiCloudHealth() {
     try {
-      const healthUrl = GEMINI_CLOUD_FUNCTION_URL.replace('gemini-proxy', 'gemini-health-check');
+      const healthUrl = GEMINI_CLOUD_FUNCTION_URL.replace('geminiProxy', 'geminiHealthCheck');
       const response = await fetch(healthUrl, { 
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
@@ -99,7 +99,7 @@ export const geminiCloudService = {
   // Configurar API key de Gemini (función admin)
   async setGeminiApiKey(apiKey, adminSecret) {
     try {
-      const setKeyUrl = GEMINI_CLOUD_FUNCTION_URL.replace('gemini-proxy', 'set-gemini-api-key');
+      const setKeyUrl = GEMINI_CLOUD_FUNCTION_URL.replace('geminiProxy', 'setGeminiApiKey');
       
       const response = await fetch(setKeyUrl, {
         method: 'POST',
@@ -131,7 +131,7 @@ export async function generateWithGeminiCloud(prompt, system = '') {
   try {
     return await geminiCloudService.makeGeminiRequest(prompt, { 
       system: system || null,
-      model: 'gemini-1.5-flash' // Mantener compatibilidad
+      model: 'gemini-2.5-flash-lite' // Mantener compatibilidad
     });
   } catch (error) {
     console.error('Error en generateWithGeminiCloud:', error);
@@ -150,7 +150,7 @@ export async function generateJsonOrTextCloud(prompt, model = 'gemini-2.5-flash-
 
 export async function generateSmartCloud(prompt, opts = {}) {
   try {
-    const model = opts.model || opts.directModel || 'gemini-2.5-flash';
+    const model = opts.model || opts.directModel || 'gemini-2.5-flash-lite';
     return await geminiCloudService.makeGeminiRequest(prompt, { 
       model,
       temperature: opts.temperature || 0.7,

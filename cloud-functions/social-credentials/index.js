@@ -4,7 +4,12 @@ const cors = require('cors');
 
 // Configurar CORS para permitir requests desde tu app
 const corsOptions = {
-  origin: ['http://localhost:3000', 'https://tu-dominio.com'], // Ajustar según tu app
+  origin: [
+    'http://localhost:3000', 
+    'http://localhost:8081', 
+    'https://tu-dominio.com',
+    'https://asiergonzalez.es'
+  ], // Ajustar según tu app
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 };
@@ -15,7 +20,7 @@ const corsHandler = cors(corsOptions);
 const secretClient = new SecretManagerServiceClient();
 
 // ID del proyecto de Google Cloud
-const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT || 'tu-project-id';
+const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT || 'asiergonzalez-web-app';
 
 // Función principal
 functions.http('socialCredentials', async (req, res) => {
@@ -23,6 +28,7 @@ functions.http('socialCredentials', async (req, res) => {
     try {
       const { method } = req;
       const { userId, platform, action } = req.body || req.query;
+      console.log('[CF] ➡️ Incoming request', { method, userId, platform, action, hasBody: !!req.body });
 
       // Validación básica
       if (!userId) {
@@ -71,9 +77,11 @@ functions.http('socialCredentials', async (req, res) => {
 // Obtener credenciales
 async function handleGetCredentials(req, res, userId, platform) {
   try {
+    console.log('[CF] 🔐 handleGetCredentials', { userId, platform });
     if (platform) {
       // Obtener credenciales de una plataforma específica
       const credentials = await getSecretCredentials(userId, platform);
+      console.log('[CF] 🔐 credentials loaded (single)', { platform, userId, hasAccessToken: !!credentials?.accessToken });
       res.json({ 
         success: true, 
         platform,
@@ -86,6 +94,12 @@ async function handleGetCredentials(req, res, userId, platform) {
         getSecretCredentials(userId, 'twitter'),
         getSecretCredentials(userId, 'linkedin')
       ]);
+      console.log('[CF] 🔐 credentials loaded (all)', {
+        userId,
+        instagram: instagram.status === 'fulfilled' && !!instagram.value?.accessToken,
+        twitter: twitter.status === 'fulfilled' && !!twitter.value?.bearerToken,
+        linkedin: linkedin.status === 'fulfilled' && !!linkedin.value?.accessToken,
+      });
 
       res.json({ 
         success: true, 
@@ -108,7 +122,24 @@ async function handleGetCredentials(req, res, userId, platform) {
 // Guardar credenciales
 async function handleSaveCredentials(req, res, userId, platform) {
   try {
-    const { credentials } = req.body;
+    const { credentials, action } = req.body;
+    console.log('[CF] 💾 handleSaveCredentials', { userId, platform, action, hasCredentials: !!credentials });
+    
+    // Si es una acción de prueba, no necesitamos credenciales
+    if (action === 'test') {
+      const testResult = await testPlatformConnection(platform, userId);
+      console.log('[CF] 🧪 testPlatformConnection result', testResult);
+      return res.json(testResult);
+    }
+    
+    // Si es intercambio de token de LinkedIn
+    if (action === 'exchange_token' && platform === 'linkedin') {
+      const { code, redirectUri } = req.body;
+      console.log('[CF] 🔄 exchange_token', { userId, platform, hasCode: !!code, redirectUri });
+      const tokenResult = await exchangeLinkedInToken(code, redirectUri, userId);
+      console.log('[CF] 🔄 exchange_token result', { success: tokenResult?.success, hasProfile: !!tokenResult?.credentials?.profile });
+      return res.json(tokenResult);
+    }
     
     if (!credentials) {
       return res.status(400).json({ 
@@ -157,9 +188,12 @@ async function getSecretCredentials(userId, platform) {
   const secretName = `projects/${PROJECT_ID}/secrets/social-${userId}-${platform}/versions/latest`;
   
   try {
+    console.log('[CF] 🔎 accessSecretVersion', { secretName });
     const [version] = await secretClient.accessSecretVersion({ name: secretName });
     const credentialsData = version.payload.data.toString();
-    return JSON.parse(credentialsData);
+    const json = JSON.parse(credentialsData);
+    console.log('[CF] 🔎 secret loaded', { platform, hasAccessToken: !!json?.accessToken, connected: json?.connected });
+    return json;
   } catch (error) {
     if (error.code === 5) { // NOT_FOUND
       return { connected: false };
@@ -215,6 +249,222 @@ async function deleteSecretCredentials(userId, platform) {
       throw error;
     }
     // Si no existe, no hay problema
+  }
+}
+
+// Función para probar la conexión a una plataforma
+async function testPlatformConnection(platform, userId) {
+  try {
+    // Obtener las credenciales almacenadas
+    const credentials = await getSecretCredentials(userId, platform);
+    
+    if (!credentials) {
+      return {
+        success: false,
+        error: `No se encontraron credenciales para ${platform}`,
+        platform
+      };
+    }
+
+    // Probar la conexión según la plataforma
+    switch (platform) {
+      case 'linkedin':
+        return await testLinkedInConnection(credentials);
+      case 'instagram':
+        return await testInstagramConnection(credentials);
+      case 'twitter':
+        return await testTwitterConnection(credentials);
+      default:
+        return {
+          success: false,
+          error: `Plataforma ${platform} no soportada para pruebas`,
+          platform
+        };
+    }
+  } catch (error) {
+    console.error(`Error testing ${platform} connection:`, error);
+    return {
+      success: false,
+      error: `Error probando conexión a ${platform}: ${error.message}`,
+      platform
+    };
+  }
+}
+
+// Función específica para probar LinkedIn
+async function testLinkedInConnection(credentials) {
+  try {
+    const fetch = (await import('node-fetch')).default;
+    
+    // Probar con la API OIDC userinfo (compatible con scopes openid/profile/email)
+    const url = 'https://api.linkedin.com/v2/userinfo';
+    console.log('[CF] 🌐 testLinkedInConnection calling (userinfo)', { url, hasAccessToken: !!credentials?.accessToken });
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${credentials.accessToken || 'test'}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const text = await response.text();
+    console.log('[CF] 🌐 LinkedIn response (userinfo)', { status: response.status, body: text?.slice(0, 300) });
+
+    if (response.ok) {
+      let data = null;
+      try { data = JSON.parse(text); } catch (_) {}
+      const memberId = data?.sub;
+      return {
+        success: true,
+        message: 'Conexión a LinkedIn verificada correctamente',
+        platform: 'linkedin',
+        memberId
+      };
+    } else {
+      return {
+        success: false,
+        error: `LinkedIn API respondió con código ${response.status}`,
+        platform: 'linkedin'
+      };
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: `Error conectando a LinkedIn: ${error.message}`,
+      platform: 'linkedin'
+    };
+  }
+}
+
+// Función específica para probar Instagram
+async function testInstagramConnection(credentials) {
+  // Por ahora, solo verificamos que tengamos las credenciales básicas
+  if (credentials.clientId && credentials.clientSecret) {
+    return {
+      success: true,
+      message: 'Credenciales de Instagram configuradas correctamente',
+      platform: 'instagram'
+    };
+  } else {
+    return {
+      success: false,
+      error: 'Credenciales de Instagram incompletas',
+      platform: 'instagram'
+    };
+  }
+}
+
+// Función específica para probar Twitter
+async function testTwitterConnection(credentials) {
+  // Por ahora, solo verificamos que tengamos las credenciales básicas
+  if (credentials.apiKey && credentials.apiSecret) {
+    return {
+      success: true,
+      message: 'Credenciales de Twitter configuradas correctamente',
+      platform: 'twitter'
+    };
+  } else {
+    return {
+      success: false,
+      error: 'Credenciales de Twitter incompletas',
+      platform: 'twitter'
+    };
+  }
+}
+
+// Función para intercambiar código de autorización por access token de LinkedIn
+async function exchangeLinkedInToken(code, redirectUri, userId) {
+  try {
+    const fetch = (await import('node-fetch')).default;
+    
+    // Obtener las credenciales de LinkedIn
+    const clientId = await getSecretValue('linkedin-client-id');
+    const clientSecret = await getSecretValue('linkedin-client-secret');
+    
+    if (!clientId || !clientSecret) {
+      throw new Error('Credenciales de LinkedIn no configuradas');
+    }
+
+    // Intercambiar código por token
+    const tokenResponse = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code: code,
+        redirect_uri: redirectUri,
+        client_id: clientId,
+        client_secret: clientSecret
+      })
+    });
+
+    if (!tokenResponse.ok) {
+      const errorText = await tokenResponse.text();
+      throw new Error(`LinkedIn token exchange failed: ${errorText}`);
+    }
+
+    const tokenData = await tokenResponse.json();
+    
+    // Obtener información del usuario con OIDC (userinfo)
+    const profileResponse = await fetch('https://api.linkedin.com/v2/userinfo', {
+      headers: {
+        'Authorization': `Bearer ${tokenData.access_token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    let profileData = null;
+    if (profileResponse.ok) {
+      profileData = await profileResponse.json();
+    }
+
+    // Guardar las credenciales completas
+    const credentials = {
+      clientId: clientId,
+      clientSecret: clientSecret,
+      accessToken: tokenData.access_token,
+      refreshToken: tokenData.refresh_token,
+      expiresIn: tokenData.expires_in,
+      connected: true,
+      profile: profileData,
+      memberId: profileData?.sub,
+      personUrn: profileData?.sub ? `urn:li:person:${profileData.sub}` : undefined,
+      connectedAt: new Date().toISOString()
+    };
+
+    await saveSecretCredentials(userId, 'linkedin', credentials);
+
+    return {
+      success: true,
+      message: 'LinkedIn autorizado correctamente',
+      platform: 'linkedin',
+      credentials: {
+        accessToken: tokenData.access_token,
+        profile: profileData
+      }
+    };
+
+  } catch (error) {
+    console.error('Error exchanging LinkedIn token:', error);
+    return {
+      success: false,
+      error: `Error autorizando LinkedIn: ${error.message}`,
+      platform: 'linkedin'
+    };
+  }
+}
+
+// Función auxiliar para obtener valores de secretos
+async function getSecretValue(secretId) {
+  try {
+    const [version] = await secretClient.accessSecretVersion({
+      name: `projects/${PROJECT_ID}/secrets/${secretId}/versions/latest`,
+    });
+    return version.payload.data.toString();
+  } catch (error) {
+    console.error(`Error getting secret ${secretId}:`, error);
+    return null;
   }
 }
 

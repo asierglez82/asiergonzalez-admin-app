@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Procesando autorización...</title>
+    <style>
+        body { 
+            font-family: sans-serif; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
+        }
+        div {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <h1>¡Autorización completada!</h1>
+        <p>Puedes cerrar esta pestaña y volver a la aplicación.</p>
+    </div>
+    <script>
+        (function() {
+            try {
+                var payload = {
+                    type: 'LINKEDIN_AUTH_SUCCESS_URL',
+                    url: window.location.href
+                };
+                var sent = false;
+                function tryPost() {
+                    try { if (window.opener) { window.opener.postMessage(payload, window.location.origin); sent = true; } } catch(e) {}
+                    try { if (window.opener) { window.opener.postMessage(payload, '*'); sent = true; } } catch(e) {}
+                    try { if (window.parent && window.parent !== window) { window.parent.postMessage(payload, window.location.origin); sent = true; } } catch(e) {}
+                    try { if (window.parent && window.parent !== window) { window.parent.postMessage(payload, '*'); sent = true; } } catch(e) {}
+                }
+                // Intentar varias veces por si el listener aún no está listo
+                var attempts = 0;
+                var interval = setInterval(function(){
+                    attempts++;
+                    tryPost();
+                    if (sent || attempts >= 10) {
+                        clearInterval(interval);
+                        setTimeout(function(){ window.close(); }, 200);
+                    }
+                }, 100);
+                tryPost();
+
+                // Si no hay opener/parent, continuar con fallback de redirección
+                // Fallback: redirigir al hash de settings con parámetros
+                var params = window.location.search || '';
+                var target = '/#/settings' + (params ? ('?linkedin_auth=success&' + params.slice(1)) : '?linkedin_auth=success');
+                window.location.replace(window.location.origin + target);
+            } catch (e) {
+                setTimeout(function() { window.close(); }, 1000);
+            }
+        })();
+    </script>
+</body>
+</html>

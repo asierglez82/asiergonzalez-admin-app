@@ -1,0 +1,18 @@
+{
+  "name": "gemini-health-check",
+  "version": "1.0.0",
+  "description": "Health check function for Gemini AI service",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "firebase-functions": "^4.8.1",
+    "@google-cloud/secret-manager": "^5.0.0",
+    "cors": "^2.8.5",
+    "node-fetch": "^2.7.0"
+  },
+  "engines": {
+    "node": "18"
+  }
+}

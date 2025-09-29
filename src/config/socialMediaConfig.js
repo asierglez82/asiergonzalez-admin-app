@@ -3,7 +3,7 @@ import { socialMediaService } from '../services/socialMedia';
 import { socialMediaCloudService } from '../services/socialMediaCloud';
 
 // Configuración del servicio a usar
-const USE_CLOUD_STORAGE = process.env.EXPO_PUBLIC_USE_CLOUD_STORAGE === 'true';
+const USE_CLOUD_STORAGE = process.env.EXPO_PUBLIC_USE_CLOUD_STORAGE === 'true' || true; // Forzar cloud storage
 
 // Exportar el servicio según la configuración
 export const activeSocialMediaService = USE_CLOUD_STORAGE 

@@ -1,11 +1,15 @@
 const functions = require('@google-cloud/functions-framework');
 const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 const cors = require('cors');
-const fetch = require('node-fetch');
 
 // Configurar CORS para permitir requests desde tu app
 const corsOptions = {
-  origin: ['http://localhost:3000', 'https://tu-dominio.com'], // Ajustar según tu app
+  origin: [
+    'http://localhost:3000', 
+    'http://localhost:8081', 
+    'https://tu-dominio.com',
+    'https://asiergonzalez.es'
+  ], // Ajustar según tu app
   credentials: true,
   methods: ['GET', 'POST', 'OPTIONS']
 };
@@ -16,7 +20,7 @@ const corsHandler = cors(corsOptions);
 const secretClient = new SecretManagerServiceClient();
 
 // ID del proyecto de Google Cloud
-const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT || 'tu-project-id';
+const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT || 'asiergonzalez-web-app';
 
 // Nombre del secret para el API key de Gemini
 const GEMINI_API_KEY_SECRET = 'gemini-api-key';
@@ -27,6 +31,9 @@ let cacheExpiration = 0;
 
 // Función principal del proxy de Gemini
 functions.http('geminiProxy', async (req, res) => {
+  // Importar fetch dinámicamente
+  const fetch = (await import('node-fetch')).default;
+  
   corsHandler(req, res, async () => {
     try {
       const { method } = req;
@@ -45,7 +52,7 @@ functions.http('geminiProxy', async (req, res) => {
       // Extraer parámetros del request
       const { 
         prompt, 
-        model = 'gemini-2.5-flash', 
+        model = 'gemini-2.5-flash-lite', 
         system, 
         temperature = 0.7,
         maxOutputTokens = 2048,
@@ -172,20 +179,23 @@ functions.http('geminiProxy', async (req, res) => {
 // Función para obtener el API key de Gemini desde Secret Manager
 async function getGeminiApiKey() {
   try {
-    // Verificar cache
-    const now = Date.now();
-    if (cachedApiKey && now < cacheExpiration) {
-      return cachedApiKey;
-    }
+    // Verificar cache (deshabilitado temporalmente para debug)
+    // const now = Date.now();
+    // if (cachedApiKey && now < cacheExpiration) {
+    //   return cachedApiKey;
+    // }
 
     const secretName = `projects/${PROJECT_ID}/secrets/${GEMINI_API_KEY_SECRET}/versions/latest`;
     
+    console.log(`🔍 Intentando acceder al secret: ${secretName}`);
     const [version] = await secretClient.accessSecretVersion({ name: secretName });
     const apiKey = version.payload.data.toString();
 
+    console.log(`🔐 API key obtenido: ${apiKey.substring(0, 10)}...`);
+
     // Cache por 1 hora
     cachedApiKey = apiKey;
-    cacheExpiration = now + (60 * 60 * 1000);
+    cacheExpiration = Date.now() + (60 * 60 * 1000);
 
     console.log('🔐 API key de Gemini obtenido desde Secret Manager');
     return apiKey;
@@ -203,6 +213,9 @@ async function getGeminiApiKey() {
 
 // Función para configurar el API key de Gemini (solo para admin)
 functions.http('setGeminiApiKey', async (req, res) => {
+  // Importar fetch dinámicamente
+  const fetch = (await import('node-fetch')).default;
+  
   corsHandler(req, res, async () => {
     try {
       const { method } = req;
@@ -295,6 +308,9 @@ async function saveGeminiApiKey(apiKey) {
 
 // Health check específico para Gemini
 functions.http('geminiHealthCheck', async (req, res) => {
+  // Importar fetch dinámicamente
+  const fetch = (await import('node-fetch')).default;
+  
   try {
     const apiKey = await getGeminiApiKey();
     const hasApiKey = !!apiKey;
@@ -303,7 +319,7 @@ functions.http('geminiHealthCheck', async (req, res) => {
     let geminiWorking = false;
     if (hasApiKey) {
       try {
-        const testUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+        const testUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`;
         const testResponse = await fetch(testUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

@@ -2,7 +2,7 @@
 import { useAuth } from '../context/AuthContext';
 
 // URL de la Cloud Function (actualizar después del despliegue)
-const CLOUD_FUNCTION_URL = process.env.EXPO_PUBLIC_CLOUD_FUNCTION_URL || 'https://europe-west1-tu-project-id.cloudfunctions.net/social-credentials';
+const CLOUD_FUNCTION_URL = process.env.EXPO_PUBLIC_CLOUD_FUNCTION_URL || 'https://europe-west1-asiergonzalez-web-app.cloudfunctions.net/socialCredentials';
 
 export const socialMediaCloudService = {
   
@@ -10,12 +10,23 @@ export const socialMediaCloudService = {
   getCurrentUserId() {
     // En una implementación real, obtendrías esto del contexto de autenticación
     // Por ahora usamos un ID fijo o del localStorage para demo
-    return 'user_' + (global.btoa ? btoa('demo-user') : 'demo-user');
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const storedUser = window.localStorage.getItem('user');
+        if (storedUser) {
+          const parsed = JSON.parse(storedUser);
+          if (parsed?.uid) return parsed.uid;
+        }
+      }
+    } catch (_) {}
+    return 'demo-user';
   },
 
   // Realizar request a la Cloud Function
   async makeCloudRequest(method, endpoint = '', body = null) {
     try {
+      const url = `${CLOUD_FUNCTION_URL}${endpoint}`;
+      console.log('[socialMediaCloud] ▶️ Request', { method, url, hasBody: !!body, action: body?.action, platform: body?.platform });
       const config = {
         method,
         headers: {
@@ -27,7 +38,8 @@ export const socialMediaCloudService = {
         config.body = JSON.stringify(body);
       }
 
-      const response = await fetch(`${CLOUD_FUNCTION_URL}${endpoint}`, config);
+      const response = await fetch(url, config);
+      console.log('[socialMediaCloud] ◀️ Response', { status: response.status, statusText: response.statusText });
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -348,6 +360,27 @@ export const socialMediaCloudService = {
     } catch (error) {
       console.error('Cloud Function health check failed:', error);
       return false;
+    }
+  },
+
+  // Probar conexión a una plataforma específica
+  async testConnection(platform) {
+    try {
+      const userId = this.getCurrentUserId();
+      console.log('[socialMediaCloud] 🧪 testConnection', { platform, userId });
+      const response = await this.makeCloudRequest('POST', '', {
+        userId,
+        platform,
+        action: 'test'
+      });
+      
+      return response;
+    } catch (error) {
+      console.error(`Error testing ${platform} connection:`, error);
+      return {
+        success: false,
+        error: error.message
+      };
     }
   }
 };

@@ -163,18 +163,18 @@ const CreatePostScreen = ({ navigation }) => {
     }
   };
 
-  // Generación automática de contenido cuando hay suficientes campos
-  useEffect(() => {
-    const shouldGenerate = imageUrl && (location || event || people) && !generating;
-    
-    if (shouldGenerate) {
-      const timeoutId = setTimeout(() => {
-        handleAutoGenerate();
-      }, 1000); // Debounce de 1 segundo
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [imageUrl, location, event, people, language, notes]);
+  // Generación automática de contenido cuando hay suficientes campos - DESACTIVADA
+  // useEffect(() => {
+  //   const shouldGenerate = imageUrl && (location || event || people) && !generating;
+  //   
+  //   if (shouldGenerate) {
+  //     const timeoutId = setTimeout(() => {
+  //       handleAutoGenerate();
+  //     }, 1000); // Debounce de 1 segundo
+  //     
+  //     return () => clearTimeout(timeoutId);
+  //   }
+  // }, [imageUrl, location, event, people, language, notes]);
 
   const handleAutoGenerate = async () => {
     if (generating) return;

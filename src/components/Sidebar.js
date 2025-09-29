@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView, Image } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 
 const Sidebar = ({ navigation, state }) => {
   const { user, logout } = useAuth();
+  const [expandedSections, setExpandedSections] = useState({});
 
   const menuItems = [
     { 
@@ -24,12 +25,20 @@ const Sidebar = ({ navigation, state }) => {
     { 
       name: 'Configuración', 
       route: 'Settings',
-      description: 'Vincular redes sociales'
-    },
-    { 
-      name: 'Gemini IA', 
-      route: 'GeminiSettings',
-      description: 'Configurar servicio de IA'
+      description: 'Configuraciones del sistema',
+      isExpandable: true,
+      subItems: [
+        {
+          name: 'Redes Sociales',
+          route: 'Settings',
+          description: 'Vincular redes sociales'
+        },
+        {
+          name: 'Gemini IA',
+          route: 'GeminiSettings',
+          description: 'Configurar servicio de IA'
+        }
+      ]
     },
   ];
 
@@ -39,6 +48,13 @@ const Sidebar = ({ navigation, state }) => {
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
     }
+  };
+
+  const toggleSection = (sectionName) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [sectionName]: !prev[sectionName]
+    }));
   };
 
   const isActiveRoute = (routeName) => {
@@ -82,25 +98,66 @@ const Sidebar = ({ navigation, state }) => {
         {/* Menú Principal */}
         <View style={styles.menuSection}>
           {menuItems.map((item) => (
-            <TouchableOpacity
-              key={item.route}
-              style={[
-                styles.menuItem,
-                isActiveRoute(item.route) && styles.menuItemActive
-              ]}
-              onPress={() => navigation.navigate(item.route)}
-            >
-              <View style={styles.menuItemContent}>
-                <Text style={[
-                  styles.menuTitle,
-                  isActiveRoute(item.route) && styles.menuTitleActive
-                ]}>
-                  {item.name}
-                </Text>
-                <Text style={styles.menuDescription}>{item.description}</Text>
-              </View>
-              {isActiveRoute(item.route) && <View style={styles.activeBar} />}
-            </TouchableOpacity>
+            <View key={item.route}>
+              <TouchableOpacity
+                style={[
+                  styles.menuItem,
+                  isActiveRoute(item.route) && styles.menuItemActive
+                ]}
+                onPress={() => {
+                  if (item.isExpandable) {
+                    toggleSection(item.name);
+                  } else {
+                    navigation.navigate(item.route);
+                  }
+                }}
+              >
+                <View style={styles.menuItemContent}>
+                  <View style={styles.menuItemHeader}>
+                    <Text style={[
+                      styles.menuTitle,
+                      isActiveRoute(item.route) && styles.menuTitleActive
+                    ]}>
+                      {item.name}
+                    </Text>
+                    {item.isExpandable && (
+                      <Text style={styles.expandIcon}>
+                        {expandedSections[item.name] ? '▼' : '▶'}
+                      </Text>
+                    )}
+                  </View>
+                  <Text style={styles.menuDescription}>{item.description}</Text>
+                </View>
+                {isActiveRoute(item.route) && <View style={styles.activeBar} />}
+              </TouchableOpacity>
+              
+              {/* Submenú expandible */}
+              {item.isExpandable && expandedSections[item.name] && item.subItems && (
+                <View style={styles.subMenu}>
+                  {item.subItems.map((subItem) => (
+                    <TouchableOpacity
+                      key={subItem.route}
+                      style={[
+                        styles.subMenuItem,
+                        isActiveRoute(subItem.route) && styles.subMenuItemActive
+                      ]}
+                      onPress={() => navigation.navigate(subItem.route)}
+                    >
+                      <View style={styles.subMenuItemContent}>
+                        <Text style={[
+                          styles.subMenuTitle,
+                          isActiveRoute(subItem.route) && styles.subMenuTitleActive
+                        ]}>
+                          {subItem.name}
+                        </Text>
+                        <Text style={styles.subMenuDescription}>{subItem.description}</Text>
+                      </View>
+                      {isActiveRoute(subItem.route) && <View style={styles.subMenuActiveBar} />}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
           ))}
         </View>
 
@@ -257,21 +314,74 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingLeft: 20,
   },
+  menuItemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   menuTitle: {
     fontSize: 15,
     fontWeight: '500',
     color: 'rgba(255, 255, 255, 0.9)',
     marginBottom: 2,
     letterSpacing: -0.1,
+    flex: 1,
   },
   menuTitleActive: {
     fontWeight: '600',
     color: '#00ca77',
   },
+  expandIcon: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.6)',
+    marginLeft: 8,
+  },
   menuDescription: {
     fontSize: 12,
     color: 'rgba(255, 255, 255, 0.5)',
     lineHeight: 16,
+  },
+  subMenu: {
+    marginLeft: 20,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  subMenuItem: {
+    marginBottom: 2,
+    position: 'relative',
+    borderRadius: 6,
+  },
+  subMenuItemActive: {
+    backgroundColor: 'rgba(0, 202, 119, 0.1)',
+  },
+  subMenuItemContent: {
+    padding: 12,
+    paddingLeft: 16,
+  },
+  subMenuTitle: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginBottom: 2,
+    letterSpacing: -0.1,
+  },
+  subMenuTitleActive: {
+    fontWeight: '500',
+    color: '#00ca77',
+  },
+  subMenuDescription: {
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.4)',
+    lineHeight: 14,
+  },
+  subMenuActiveBar: {
+    position: 'absolute',
+    left: 0,
+    top: 6,
+    bottom: 6,
+    width: 2,
+    backgroundColor: '#00ca77',
+    borderRadius: 1,
   },
   activeBar: {
     position: 'absolute',

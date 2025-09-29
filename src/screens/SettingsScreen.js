@@ -14,6 +14,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import socialMediaService, { socialMediaConfig } from '../config/socialMediaConfig';
+import { socialMediaCloudService } from '../services/socialMediaCloud';
+import LinkedInAuth from '../components/LinkedInAuth';
 
 const SettingsScreen = ({ navigation }) => {
   // Estados para Instagram
@@ -40,7 +42,78 @@ const SettingsScreen = ({ navigation }) => {
 
   useEffect(() => {
     loadSocialMediaCredentials();
+    // Si venimos del callback en la misma pestaña, procesa parámetros
+    try {
+      // Intentar primero con search (?query)
+      let urlParams = new URLSearchParams(window.location.search);
+      let linkedinAuth = urlParams.get('linkedin_auth');
+      let code = urlParams.get('code');
+      let state = urlParams.get('state');
+
+      // Si no vienen en search, intentar extraerlos del hash (#/ruta?query)
+      if (!linkedinAuth || !code) {
+        const hash = window.location.hash || '';
+        const qIndex = hash.indexOf('?');
+        if (qIndex !== -1) {
+          const query = hash.substring(qIndex + 1);
+          const hashParams = new URLSearchParams(query);
+          if (!linkedinAuth) linkedinAuth = hashParams.get('linkedin_auth');
+          if (!code) code = hashParams.get('code');
+          if (!state) state = hashParams.get('state');
+        }
+      }
+      if (linkedinAuth === 'success' && code) {
+        console.log('🔄 Procesando callback de LinkedIn en la misma pestaña (hash/search detectados)...');
+        exchangeCodeForToken(code);
+        // Limpia la URL
+        window.history.replaceState({}, document.title, window.location.pathname + (window.location.hash.split('?')[0] || ''));
+      }
+    } catch (_) {}
   }, []);
+
+  // (El flujo de OAuth ahora se maneja dentro de LinkedInAuth usando expo-web-browser)
+
+  // Intercambiar código por token
+  const exchangeCodeForToken = async (code) => {
+    try {
+      console.log('🔄 [PASO 4] Llamando a la Cloud Function para intercambiar el token...');
+      
+      const response = await fetch('https://europe-west1-asiergonzalez-web-app.cloudfunctions.net/socialCredentials', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: socialMediaCloudService.getCurrentUserId(),
+          platform: 'linkedin',
+          action: 'exchange_token',
+          code: code,
+          redirectUri: window.location.origin + '/auth/linkedin/callback'
+        })
+      });
+
+      const result = await response.json();
+      console.log('✅ [PASO 5] Respuesta recibida de la Cloud Function:', result);
+
+      if (result.success) {
+        console.log('🎉 ¡ÉXITO TOTAL! Token obtenido y guardado.');
+        setLinkedinConnected(true);
+        if (result.credentials?.profile) {
+          setLinkedinPersonId(result.credentials.profile.id);
+        }
+        Alert.alert('Éxito', 'LinkedIn autorizado correctamente');
+        
+        // Limpiar la URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else {
+        throw new Error(result.error || 'Error obteniendo el token');
+      }
+
+    } catch (error) {
+      console.error('❌ Error en el intercambio de código:', error);
+      Alert.alert('Error', `Error obteniendo el token: ${error.message}`);
+    }
+  };
 
   const loadSocialMediaCredentials = async () => {
     try {
@@ -127,46 +200,52 @@ const SettingsScreen = ({ navigation }) => {
   };
 
   const testConnection = async (platform) => {
+    console.log(`🔍 Iniciando prueba de conexión para ${platform}`);
     setTestingConnection(platform);
     
     try {
-      let isValid = false;
+      console.log(`📡 Usando servicio:`, socialMediaService);
+      console.log(`🌥️ Cloud storage habilitado:`, socialMediaConfig.useCloudStorage);
       
-      switch (platform) {
-        case 'instagram':
-          // Simulamos la verificación del token de Instagram
-          if (instagramAccessToken && instagramUserId) {
-            // Aquí iría la llamada real a la API de Instagram
-            isValid = instagramAccessToken.length > 10; // Validación básica
-          }
-          break;
-          
-        case 'twitter':
-          // Verificación del token de Twitter
-          if (twitterBearerToken || (twitterApiKey && twitterApiSecret)) {
-            isValid = twitterBearerToken.length > 10 || twitterApiKey.length > 10;
-          }
-          break;
-          
-        case 'linkedin':
-          // Verificación del token de LinkedIn
-          if (linkedinAccessToken) {
-            isValid = linkedinAccessToken.length > 10;
-          }
-          break;
-      }
-
-      if (isValid) {
+      // Usar el servicio cloud para probar la conexión
+      const result = await socialMediaService.testConnection(platform);
+      
+      console.log(`📊 Resultado de la prueba:`, result);
+      
+      if (result.success) {
         Alert.alert('Éxito', `Conexión a ${platform} verificada correctamente`);
+        // Actualizar el estado local
+        switch (platform) {
+          case 'instagram':
+            setInstagramConnected(true);
+            break;
+          case 'twitter':
+            setTwitterConnected(true);
+            break;
+          case 'linkedin':
+            setLinkedinConnected(true);
+            break;
+        }
       } else {
-        Alert.alert('Error', `No se pudo verificar la conexión a ${platform}. Revisa las credenciales.`);
+        Alert.alert('Error', result.error || `No se pudo verificar la conexión a ${platform}`);
       }
     } catch (error) {
-      console.error(`Error testing ${platform} connection:`, error);
-      Alert.alert('Error', `Error al probar la conexión a ${platform}`);
+      console.error(`❌ Error testing ${platform} connection:`, error);
+      Alert.alert('Error', `Error al probar la conexión a ${platform}: ${error.message}`);
     } finally {
       setTestingConnection('');
     }
+  };
+
+  const handleLinkedInAuthSuccess = (codeOrObj) => {
+    const code = typeof codeOrObj === 'string' ? codeOrObj : codeOrObj?.code;
+    console.log('✅ [PASO 3] Código recibido en SettingsScreen. Iniciando intercambio de token...');
+    exchangeCodeForToken(code);
+  };
+
+  const handleLinkedInAuthError = (error) => {
+    console.error('❌ Error en autorización de LinkedIn:', error);
+    Alert.alert('Error', `Error autorizando LinkedIn: ${error.message}`);
   };
 
   const clearCredentials = (platform) => {
@@ -445,6 +524,12 @@ const SettingsScreen = ({ navigation }) => {
                 placeholder="Tu person ID de LinkedIn"
                 placeholderTextColor="rgba(255,255,255,0.4)"
                 autoCapitalize="none"
+              />
+
+              {/* Componente de autorización de LinkedIn */}
+              <LinkedInAuth
+                onAuthSuccess={handleLinkedInAuthSuccess}
+                onAuthError={handleLinkedInAuthError}
               />
 
               <View style={styles.buttonRow}>

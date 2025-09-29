@@ -18,7 +18,7 @@ export const geminiConfig = {
   localApiKey: process.env.EXPO_PUBLIC_GEMINI_API_KEY,
   
   // Configuración de modelos
-  defaultModel: 'gemini-2.5-flash',
+  defaultModel: 'gemini-2.5-flash-lite',
   fastModel: 'gemini-2.5-flash-lite',
   advancedModel: 'gemini-1.5-pro',
   
