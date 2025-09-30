@@ -7,8 +7,10 @@ const corsOptions = {
   origin: [
     'http://localhost:3000', 
     'http://localhost:8081', 
+    'http://localhost', 
     'https://tu-dominio.com',
-    'https://asiergonzalez.es'
+    'https://asiergonzalez.es',
+    'https://app.asiergonzalez.es'
   ], // Ajustar según tu app
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
