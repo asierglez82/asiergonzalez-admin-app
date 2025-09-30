@@ -8,10 +8,12 @@ import DashboardScreen from './src/screens/DashboardScreen';
 import ContentEditorScreen from './src/screens/ContentEditorScreen';
 import AnalyticsScreen from './src/screens/AnalyticsScreen';
 import CreatePostScreen from './src/screens/CreatePostScreen';
+import CreateQuoteScreen from './src/screens/CreateQuoteScreen';
 import BlogCRUDScreen from './src/screens/BlogCRUDScreen';
 import EditBlogPostScreen from './src/screens/EditBlogPostScreen';
 import ProjectsCRUDScreen from './src/screens/ProjectsCRUDScreen';
 import QuotesCRUDScreen from './src/screens/QuotesCRUDScreen';
+import EditQuoteScreen from './src/screens/EditQuoteScreen';
 import PodcastCRUDScreen from './src/screens/PodcastCRUDScreen';
 import BooksCRUDScreen from './src/screens/BooksCRUDScreen';
 import ConferencesCRUDScreen from './src/screens/ConferencesCRUDScreen';
@@ -88,6 +90,11 @@ const AuthenticatedApp = () => {
         options={{ title: 'Nuevo Post' }}
       />
       <Drawer.Screen 
+        name="CreateQuote" 
+        component={CreateQuoteScreen}
+        options={{ title: 'Nueva Quote' }}
+      />
+      <Drawer.Screen 
         name="BlogCRUD" 
         component={BlogCRUDScreen}
         options={{ title: 'Gestión Blog' }}
@@ -106,6 +113,11 @@ const AuthenticatedApp = () => {
         name="QuotesCRUD" 
         component={QuotesCRUDScreen}
         options={{ title: 'Gestión Quotes' }}
+      />
+      <Drawer.Screen 
+        name="EditQuote" 
+        component={EditQuoteScreen}
+        options={{ title: 'Editar Quote' }}
       />
       <Drawer.Screen 
         name="PodcastCRUD" 

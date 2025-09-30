@@ -87,8 +87,24 @@ INFORMACIÓN DISPONIBLE:
 Genera el siguiente contenido basándote en la información proporcionada:
 
 1. FRASE PRINCIPAL: ${instructions.phrase} (1-2 líneas, inspiradora y profesional)
-2. TEXTO WEB: ${instructions.webText} (70-120 palabras, expande la frase principal)
+2. TEXTO WEB: ${instructions.webText} (120-220 palabras, 2-3 párrafos breves)
 3. CTA: ${instructions.cta} (invita a la conversación)
+
+CONTENIDO HTML PARA QUOTE (campo "content"):
+• Devuélvelo como HTML listo para incrustar, siguiendo este esquema y estilos inline:
+  <div style="width: 100%;height: auto;clear: both;float: left;position: relative;padding-left: 70px;margin-top: 10px;margin-bottom: 10px;">
+    <div style="position: relative;margin-bottom: 30px">
+      <img style="width: 40px;height: 40px" src="/assets/img/svg/quote.svg" alt="tumb" />
+    </div>
+    <p style="font-size: 20px;font-style: italic;margin-bottom: 23px">[FRASE LITERAL]</p>
+  </div>
+  <br>
+  <p>[PÁRRAFO 1, 50-90 palabras]</p><br>
+  <p>[PÁRRAFO 2, 50-90 palabras]</p><br>
+  <p>[PÁRRAFO 3 opcional, 40-70 palabras]</p>
+
+• No uses emojis ni listas; solo párrafos.
+• Usa el idioma indicado.
 
 CAMPOS DEL BLOG POST:
 4. TÍTULO: Un título atractivo para el blog post (máximo 60 caracteres)
@@ -113,6 +129,7 @@ Devuelve un JSON con esta estructura:
   "phrase": "string",
   "webText": "string",
   "cta": "string",
+  "content": "string",
   "title": "string",
   "author": "Asier González",
   "blogDate": "string",

@@ -16,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import socialMediaService, { socialMediaConfig } from '../config/socialMediaConfig';
 import { socialMediaCloudService } from '../services/socialMediaCloud';
 import LinkedInAuth from '../components/LinkedInAuth';
+import InstagramAuth from '../components/InstagramAuth';
 
 const SettingsScreen = ({ navigation }) => {
   // Estados para Instagram
@@ -115,9 +116,51 @@ const SettingsScreen = ({ navigation }) => {
     }
   };
 
+  // Intercambiar código por token (Instagram)
+  const exchangeInstagramCodeForToken = async (code) => {
+    try {
+      console.log('🔄 [IG PASO 4] Llamando a la Cloud Function para intercambiar el token de Instagram...');
+      const response = await fetch('https://europe-west1-asiergonzalez-web-app.cloudfunctions.net/socialCredentials', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: socialMediaCloudService.getCurrentUserId(),
+          platform: 'instagram',
+          action: 'exchange_token',
+          code: code,
+          redirectUri: window.location.origin + '/auth/instagram/callback/'
+        })
+      });
+
+      const result = await response.json();
+      console.log('✅ [IG PASO 5] Respuesta recibida de la Cloud Function (Instagram):', result);
+
+      if (result.success) {
+        setInstagramConnected(true);
+        if (result.credentials?.accessToken) {
+          setInstagramAccessToken(String(result.credentials.accessToken));
+        }
+        if (result.credentials?.userId) {
+          setInstagramUserId(String(result.credentials.userId));
+        }
+        Alert.alert('Éxito', 'Instagram autorizado correctamente');
+        try {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } catch (_) {}
+      } else {
+        throw new Error(result.error || 'Error obteniendo el token de Instagram');
+      }
+    } catch (error) {
+      console.error('❌ Error en el intercambio de código (Instagram):', error);
+      Alert.alert('Error', `Error obteniendo el token de Instagram: ${error.message}`);
+    }
+  };
+
   const loadSocialMediaCredentials = async () => {
     try {
-      // Cargar credenciales de Instagram
+      // Cargar credenciales de Instagram desde AsyncStorage
       const instagramData = await AsyncStorage.getItem('instagram_credentials');
       if (instagramData) {
         const { accessToken, userId, connected } = JSON.parse(instagramData);
@@ -126,7 +169,7 @@ const SettingsScreen = ({ navigation }) => {
         setInstagramConnected(connected || false);
       }
 
-      // Cargar credenciales de Twitter
+      // Cargar credenciales de Twitter desde AsyncStorage
       const twitterData = await AsyncStorage.getItem('twitter_credentials');
       if (twitterData) {
         const { 
@@ -145,13 +188,46 @@ const SettingsScreen = ({ navigation }) => {
         setTwitterConnected(connected || false);
       }
 
-      // Cargar credenciales de LinkedIn
-      const linkedinData = await AsyncStorage.getItem('linkedin_credentials');
-      if (linkedinData) {
-        const { accessToken, personId, connected } = JSON.parse(linkedinData);
-        setLinkedinAccessToken(accessToken || '');
-        setLinkedinPersonId(personId || '');
-        setLinkedinConnected(connected || false);
+      // Cargar estado de LinkedIn desde Secret Manager (Cloud)
+      console.log('🔍 Verificando estado de LinkedIn desde Secret Manager...');
+      try {
+        const linkedinCreds = await socialMediaCloudService.getLinkedInCredentials();
+        console.log('LinkedIn credentials from cloud:', linkedinCreds);
+        
+        if (linkedinCreds?.connected && linkedinCreds?.accessToken) {
+          setLinkedinConnected(true);
+          setLinkedinAccessToken('***'); // No mostrar el token real por seguridad
+          console.log('✅ LinkedIn conectado desde Secret Manager');
+          
+          // Sincronizar con AsyncStorage para mantener coherencia
+          await AsyncStorage.setItem('linkedin_credentials', JSON.stringify({
+            accessToken: linkedinCreds.accessToken,
+            personId: linkedinCreds.personId || '',
+            connected: true
+          }));
+        } else {
+          // No está conectado en Secret Manager, verificar AsyncStorage como fallback
+          const linkedinData = await AsyncStorage.getItem('linkedin_credentials');
+          if (linkedinData) {
+            const { accessToken, personId, connected } = JSON.parse(linkedinData);
+            setLinkedinAccessToken(accessToken || '');
+            setLinkedinPersonId(personId || '');
+            setLinkedinConnected(connected || false);
+          } else {
+            setLinkedinConnected(false);
+            console.log('ℹ️ LinkedIn no conectado');
+          }
+        }
+      } catch (cloudError) {
+        console.warn('⚠️ Error consultando Secret Manager, usando AsyncStorage:', cloudError.message);
+        // Fallback a AsyncStorage si falla la consulta a Secret Manager
+        const linkedinData = await AsyncStorage.getItem('linkedin_credentials');
+        if (linkedinData) {
+          const { accessToken, personId, connected } = JSON.parse(linkedinData);
+          setLinkedinAccessToken(accessToken || '');
+          setLinkedinPersonId(personId || '');
+          setLinkedinConnected(connected || false);
+        }
       }
     } catch (error) {
       console.error('Error loading social media credentials:', error);
@@ -182,13 +258,30 @@ const SettingsScreen = ({ navigation }) => {
       };
       await AsyncStorage.setItem('twitter_credentials', JSON.stringify(twitterCredentials));
 
-      // Guardar credenciales de LinkedIn
-      const linkedinCredentials = {
-        accessToken: linkedinAccessToken,
-        personId: linkedinPersonId,
-        connected: linkedinConnected
-      };
-      await AsyncStorage.setItem('linkedin_credentials', JSON.stringify(linkedinCredentials));
+      // Guardar/Desconectar LinkedIn
+      if (!linkedinConnected) {
+        // Si el usuario desconectó LinkedIn, eliminar de Secret Manager y AsyncStorage
+        console.log('🔌 Desconectando LinkedIn...');
+        try {
+          await socialMediaCloudService.deleteCredentials('linkedin');
+          await AsyncStorage.removeItem('linkedin_credentials');
+          setLinkedinAccessToken('');
+          setLinkedinPersonId('');
+          console.log('✅ LinkedIn desconectado correctamente');
+        } catch (deleteError) {
+          console.error('⚠️ Error eliminando credenciales de LinkedIn:', deleteError);
+          // Continuar aunque falle, al menos limpiamos local
+          await AsyncStorage.removeItem('linkedin_credentials');
+        }
+      } else {
+        // Si está conectado, solo actualizar AsyncStorage (Secret Manager ya tiene el token)
+        const linkedinCredentials = {
+          accessToken: linkedinAccessToken,
+          personId: linkedinPersonId,
+          connected: linkedinConnected
+        };
+        await AsyncStorage.setItem('linkedin_credentials', JSON.stringify(linkedinCredentials));
+      }
 
       Alert.alert('Éxito', 'Configuración guardada correctamente');
     } catch (error) {
@@ -246,6 +339,17 @@ const SettingsScreen = ({ navigation }) => {
   const handleLinkedInAuthError = (error) => {
     console.error('❌ Error en autorización de LinkedIn:', error);
     Alert.alert('Error', `Error autorizando LinkedIn: ${error.message}`);
+  };
+
+  const handleInstagramAuthSuccess = (codeOrObj) => {
+    const code = typeof codeOrObj === 'string' ? codeOrObj : codeOrObj?.code;
+    console.log('✅ [IG PASO 3] Código recibido en SettingsScreen. Iniciando intercambio de token...');
+    exchangeInstagramCodeForToken(code);
+  };
+
+  const handleInstagramAuthError = (error) => {
+    console.error('❌ Error en autorización de Instagram:', error);
+    Alert.alert('Error', `Error autorizando Instagram: ${error.message}`);
   };
 
   const clearCredentials = (platform) => {
@@ -333,6 +437,13 @@ const SettingsScreen = ({ navigation }) => {
 
           {instagramConnected && (
             <View style={styles.credentialsSection}>
+              <InstagramAuth
+                onAuthSuccess={(codeOrObj) => {
+                  const code = typeof codeOrObj === 'string' ? codeOrObj : codeOrObj?.code;
+                  handleInstagramAuthSuccess(code);
+                }}
+                onAuthError={(err) => handleInstagramAuthError(err)}
+              />
               <Text style={styles.credentialLabel}>Access Token</Text>
               <TextInput
                 style={styles.credentialInput}

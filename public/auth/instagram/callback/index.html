@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Procesando autorización...</title>
+    <style>
+        body { 
+            font-family: sans-serif; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
+        }
+        div {
+            text-align: center;
+        }
+    </style>
+    <script>
+      // Redirigir una vez montado el documento para asegurar que window.opener está listo
+      document.addEventListener('DOMContentLoaded', function () {
+        try {
+          var payload = { type: 'expo-web-browser', url: window.location.href };
+          function postToAllTargets() {
+            try { if (window.opener && !window.opener.closed) { window.opener.postMessage(payload, '*'); } } catch (_) {}
+            try { if (window.parent && window.parent !== window) { window.parent.postMessage(payload, '*'); } } catch (_) {}
+          }
+          postToAllTargets();
+          var attempts = 0;
+          var maxAttempts = 10;
+          var interval = setInterval(function () {
+            attempts += 1;
+            postToAllTargets();
+            if (attempts >= maxAttempts) {
+              clearInterval(interval);
+              try { window.close(); } catch (_) {}
+            }
+          }, 200);
+        } catch (e) {
+          console.error('Error enviando mensaje de callback Instagram:', e);
+        }
+      });
+    </script>
+</head>
+<body>
+    <div>
+        <h1>¡Autorización de Instagram completada!</h1>
+        <p>Puedes cerrar esta pestaña y volver a la aplicación.</p>
+    </div>
+</body>
+</html>
+
+

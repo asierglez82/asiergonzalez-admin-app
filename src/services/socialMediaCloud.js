@@ -6,6 +6,13 @@ const RAW_CF_URL = process.env.EXPO_PUBLIC_CLOUD_FUNCTION_URL || 'https://europe
 const CLOUD_FUNCTION_URL = RAW_CF_URL.replace('socialCredentials', 'social-credentials');
 console.log('[socialMediaCloud] 🌐 CF URL en uso:', CLOUD_FUNCTION_URL);
 
+// Flag para activar publicación real desde cloud (por defecto desactivado para evitar falsos positivos)
+const ENABLE_CLOUD_PUBLISH = process.env.EXPO_PUBLIC_ENABLE_CLOUD_PUBLISH === 'true';
+console.log('[socialMediaCloud] ENABLE_CLOUD_PUBLISH:', ENABLE_CLOUD_PUBLISH, 'raw:', process.env.EXPO_PUBLIC_ENABLE_CLOUD_PUBLISH);
+if (!ENABLE_CLOUD_PUBLISH) {
+  console.log('[socialMediaCloud] ⚠️ Publicación cloud en modo DEMO (no se realizan publicaciones reales).');
+}
+
 export const socialMediaCloudService = {
   
   // Obtener ID del usuario actual
@@ -42,7 +49,7 @@ export const socialMediaCloudService = {
 
       let response = await fetch(url, config);
       // Fallback automático: si la URL legacy estuviera en caché, prueba variante kebab/camel
-      if (!response.ok && (response.status === 404 || response.status === 400)) {
+      if (!response.ok && (response.status === 404)) {
         const altUrl = url.includes('social-credentials')
           ? url.replace('social-credentials', 'socialCredentials')
           : url.replace('socialCredentials', 'social-credentials');
@@ -55,7 +62,9 @@ export const socialMediaCloudService = {
       console.log('[socialMediaCloud] ◀️ Response', { status: response.status, statusText: response.statusText });
       
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        let bodyText = '';
+        try { bodyText = await response.text(); } catch (_) {}
+        throw new Error(`HTTP ${response.status}: ${response.statusText} ${bodyText}`);
       }
 
       return await response.json();
@@ -199,17 +208,17 @@ export const socialMediaCloudService = {
         throw new Error('Instagram no está conectado');
       }
 
-      // Aquí iría la lógica real para publicar en Instagram usando las credenciales de la nube
-      console.log('Publishing to Instagram with cloud credentials:', { content, imageUrl });
-      
-      // Simulación de llamada a la API de Instagram
+      console.log('Publishing to Instagram with cloud credentials:', { content, imageUrl, ENABLE_CLOUD_PUBLISH });
+      if (!ENABLE_CLOUD_PUBLISH) {
+        return {
+          success: false,
+          platform: 'instagram',
+          error: 'Cloud publish demo mode. Habilita EXPO_PUBLIC_ENABLE_CLOUD_PUBLISH=true para publicar.'
+        };
+      }
+      // TODO: implementar llamada real a API
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      return { 
-        success: true, 
-        platform: 'instagram',
-        message: 'Publicado correctamente en Instagram (usando credenciales de la nube)'
-      };
+      return { success: true, platform: 'instagram', message: 'Publicado correctamente en Instagram (cloud)' };
     } catch (error) {
       console.error('Error publishing to Instagram:', error);
       return { 
@@ -228,17 +237,17 @@ export const socialMediaCloudService = {
         throw new Error('Twitter no está conectado');
       }
 
-      // Aquí iría la lógica real para publicar en Twitter/X
-      console.log('Publishing to Twitter with cloud credentials:', { content });
-      
-      // Simulación de llamada a la API de Twitter
+      console.log('Publishing to Twitter with cloud credentials:', { content, ENABLE_CLOUD_PUBLISH });
+      if (!ENABLE_CLOUD_PUBLISH) {
+        return {
+          success: false,
+          platform: 'twitter',
+          error: 'Cloud publish demo mode. Habilita EXPO_PUBLIC_ENABLE_CLOUD_PUBLISH=true para publicar.'
+        };
+      }
+      // TODO: implementar llamada real a API
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      return { 
-        success: true, 
-        platform: 'twitter',
-        message: 'Publicado correctamente en Twitter (usando credenciales de la nube)'
-      };
+      return { success: true, platform: 'twitter', message: 'Publicado correctamente en Twitter (cloud)' };
     } catch (error) {
       console.error('Error publishing to Twitter:', error);
       return { 
@@ -257,17 +266,22 @@ export const socialMediaCloudService = {
         throw new Error('LinkedIn no está conectado');
       }
 
-      // Aquí iría la lógica real para publicar en LinkedIn
-      console.log('Publishing to LinkedIn with cloud credentials:', { content, imageUrl });
-      
-      // Simulación de llamada a la API de LinkedIn
-      await new Promise(resolve => setTimeout(resolve, 2500));
-      
-      return { 
-        success: true, 
+      console.log('Publishing to LinkedIn with cloud credentials:', { content, imageUrl, ENABLE_CLOUD_PUBLISH });
+      if (!ENABLE_CLOUD_PUBLISH) {
+        return { success: false, platform: 'linkedin', error: 'Cloud publish demo mode. Habilita EXPO_PUBLIC_ENABLE_CLOUD_PUBLISH=true para publicar.' };
+      }
+
+      // Llamar a la Cloud Function para publicar realmente
+      const userId = this.getCurrentUserId();
+      const resp = await this.makeCloudRequest('POST', '', {
+        userId,
         platform: 'linkedin',
-        message: 'Publicado correctamente en LinkedIn (usando credenciales de la nube)'
-      };
+        action: 'publish',
+        content,
+        imageUrl
+      });
+
+      return { success: !!resp?.success, platform: 'linkedin', response: resp, error: resp?.error };
     } catch (error) {
       console.error('Error publishing to LinkedIn:', error);
       return { 

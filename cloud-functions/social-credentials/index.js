@@ -30,7 +30,7 @@ functions.http('socialCredentials', async (req, res) => {
       // Priorizar query en GET y body en el resto de métodos
       const source = method === 'GET' ? (req.query || {}) : (req.body || {});
       const { userId, platform, action } = source;
-      console.log('[CF] ➡️ Incoming request', { method, userId, platform, action, hasBody: !!req.body });
+      console.log('[CF] ➡️ Incoming request', { method, userId, platform, action, hasBody: !!req.body, bodyKeys: Object.keys(req.body || {}), body: req.body });
 
       // Validación básica
       if (!userId) {
@@ -54,7 +54,12 @@ functions.http('socialCredentials', async (req, res) => {
           await handleGetCredentials(req, res, userId, platform);
           break;
         case 'POST':
-          await handleSaveCredentials(req, res, userId, platform);
+          // Soporta varias acciones vía body.action
+          if (req.body?.action === 'publish' && platform === 'linkedin') {
+            await handlePublishLinkedIn(req, res, userId);
+          } else {
+            await handleSaveCredentials(req, res, userId, platform);
+          }
           break;
         case 'DELETE':
           await handleDeleteCredentials(req, res, userId, platform);
@@ -334,6 +339,159 @@ async function testLinkedInConnection(credentials) {
       error: `Error conectando a LinkedIn: ${error.message}`,
       platform: 'linkedin'
     };
+  }
+}
+
+// Publicación en LinkedIn como persona (UGC Post con texto y opcional imagen enlazada)
+async function handlePublishLinkedIn(req, res, userId) {
+  try {
+    const fetch = (await import('node-fetch')).default;
+    const { content, imageUrl } = req.body || {};
+    const credentials = await getSecretCredentials(userId, 'linkedin');
+
+    if (!credentials?.accessToken) {
+      return res.status(400).json({ success: false, error: 'LinkedIn no conectado' });
+    }
+
+    // Obtener person URN desde el perfil (OIDC userinfo) si no está guardado
+    let personUrn = credentials.personUrn;
+    if (!personUrn) {
+      const profileResp = await fetch('https://api.linkedin.com/v2/userinfo', {
+        headers: { 'Authorization': `Bearer ${credentials.accessToken}` }
+      });
+      if (!profileResp.ok) {
+        const t = await profileResp.text();
+        throw new Error(`LinkedIn userinfo failed: ${profileResp.status} ${t}`);
+      }
+      const profile = await profileResp.json();
+      if (!profile?.sub) throw new Error('No se pudo obtener el memberId de LinkedIn');
+      personUrn = `urn:li:person:${profile.sub}`;
+    }
+
+    let uploadedAsset = null;
+
+    // Si hay imagen, subirla a LinkedIn usando el flujo registerUpload
+    if (imageUrl) {
+      try {
+        console.log('[CF] 📤 Iniciando subida de imagen a LinkedIn:', imageUrl);
+        
+        // Paso 1: Registrar upload
+        const registerBody = {
+          registerUploadRequest: {
+            recipes: ['urn:li:digitalmediaRecipe:feedshare-image'],
+            owner: personUrn,
+            serviceRelationships: [
+              {
+                relationshipType: 'OWNER',
+                identifier: 'urn:li:userGeneratedContent'
+              }
+            ]
+          }
+        };
+
+        const registerResp = await fetch('https://api.linkedin.com/v2/assets?action=registerUpload', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${credentials.accessToken}`,
+            'Content-Type': 'application/json',
+            'X-Restli-Protocol-Version': '2.0.0'
+          },
+          body: JSON.stringify(registerBody)
+        });
+
+        const registerText = await registerResp.text();
+        if (!registerResp.ok) {
+          throw new Error(`registerUpload failed: ${registerResp.status} ${registerText}`);
+        }
+
+        const registerData = JSON.parse(registerText);
+        const uploadUrl = registerData.value?.uploadMechanism?.['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest']?.uploadUrl;
+        const asset = registerData.value?.asset;
+
+        if (!uploadUrl || !asset) {
+          throw new Error('No se obtuvo uploadUrl o asset del registro');
+        }
+
+        console.log('[CF] ✅ Register upload OK, asset:', asset);
+
+        // Paso 2: Descargar la imagen desde Firebase
+        const imageResp = await fetch(imageUrl);
+        if (!imageResp.ok) {
+          throw new Error(`No se pudo descargar la imagen: ${imageResp.status}`);
+        }
+        const imageBuffer = await imageResp.buffer();
+        
+        console.log('[CF] ✅ Imagen descargada, tamaño:', imageBuffer.length);
+
+        // Paso 3: Subir la imagen a LinkedIn
+        const uploadResp = await fetch(uploadUrl, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${credentials.accessToken}`,
+            'Content-Type': 'application/octet-stream'
+          },
+          body: imageBuffer
+        });
+
+        if (!uploadResp.ok) {
+          const uploadError = await uploadResp.text();
+          throw new Error(`Upload failed: ${uploadResp.status} ${uploadError}`);
+        }
+
+        console.log('[CF] ✅ Imagen subida a LinkedIn');
+        uploadedAsset = asset;
+      } catch (imgError) {
+        console.error('[CF] ⚠️ Error subiendo imagen, publicando sin imagen:', imgError.message);
+        // Continuar sin imagen si falla la subida
+      }
+    }
+
+    // Crear UGC Post
+    const ugcBody = {
+      author: personUrn,
+      lifecycleState: 'PUBLISHED',
+      specificContent: {
+        'com.linkedin.ugc.ShareContent': {
+          shareCommentary: { text: content?.slice(0, 2990) || '' },
+          shareMediaCategory: uploadedAsset ? 'IMAGE' : 'NONE',
+          media: uploadedAsset ? [
+            {
+              status: 'READY',
+              description: { text: 'Image' },
+              media: uploadedAsset,
+              title: { text: 'Image' }
+            }
+          ] : []
+        }
+      },
+      visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' }
+    };
+
+    console.log('[CF] 📤 Publicando UGC Post con', uploadedAsset ? 'imagen' : 'solo texto');
+
+    const postResp = await fetch('https://api.linkedin.com/v2/ugcPosts', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${credentials.accessToken}`,
+        'Content-Type': 'application/json',
+        'X-Restli-Protocol-Version': '2.0.0'
+      },
+      body: JSON.stringify(ugcBody)
+    });
+
+    const postText = await postResp.text();
+    if (!postResp.ok) {
+      return res.status(postResp.status).json({ success: false, error: postText });
+    }
+
+    let postJson = null;
+    try { postJson = JSON.parse(postText); } catch (_) {}
+
+    console.log('[CF] ✅ Post publicado en LinkedIn');
+    return res.json({ success: true, platform: 'linkedin', response: postJson || postText });
+  } catch (error) {
+    console.error('[CF] ❌ Error handlePublishLinkedIn:', error);
+    return res.status(500).json({ success: false, error: error.message });
   }
 }
 
