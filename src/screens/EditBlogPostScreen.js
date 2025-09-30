@@ -29,6 +29,7 @@ const EditBlogPostScreen = ({ navigation, route }) => {
   const [post, setPost] = useState(null);
   const [isDraft, setIsDraft] = useState(true);
   
+   
   // Estados para redes sociales
   const [connectedPlatforms, setConnectedPlatforms] = useState({
     instagram: false,
