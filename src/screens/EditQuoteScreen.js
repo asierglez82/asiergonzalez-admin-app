@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert,
 import { Ionicons } from '@expo/vector-icons';
 import { quotesService } from '../services/firestore';
 import socialMediaService from '../config/socialMediaConfig';
+import { storageService } from '../services/storage';
 
 const { width } = Dimensions.get('window');
 
@@ -104,6 +105,18 @@ const EditQuoteScreen = ({ navigation, route }) => {
 
   const handleBack = () => navigation.navigate('QuotesCRUD');
 
+  // Asegurar URL pública de imagen: si no es http(s), subir a Storage (quotes-images)
+  const ensurePublicImageUrl = async (imageUrl) => {
+    try {
+      if (!imageUrl) return '';
+      if (/^https?:\/\//i.test(imageUrl)) return imageUrl;
+      const upload = await storageService.uploadImage(imageUrl, 'quotes-images');
+      return upload?.success ? upload.url : '';
+    } catch (e) {
+      return '';
+    }
+  };
+
   const handleCancel = () => {
     if (!quote) return;
     setFormData({
@@ -148,7 +161,6 @@ const EditQuoteScreen = ({ navigation, route }) => {
         ...formData,
         draft: isDraft,
         updatedAt: new Date(),
-        social: { draft: isDraft },
         socialMedia: { ...socialMediaData, published: publishedStatus },
       };
       await quotesService.update(quoteId, updateData);
@@ -168,7 +180,6 @@ const EditQuoteScreen = ({ navigation, route }) => {
         ...formData,
         draft: false,
         updatedAt: new Date(),
-        social: { draft: false },
         socialMedia: { ...socialMediaData, published: publishedStatus },
       };
       await quotesService.update(quoteId, updateData);
@@ -341,7 +352,8 @@ const EditQuoteScreen = ({ navigation, route }) => {
                     onPress={async () => {
                       try {
                         setPublishing(prev => ({ ...prev, linkedin: true }));
-                        const res = await socialMediaService.publishToLinkedIn(socialMediaData.linkedin, formData.image);
+                        const publicImageUrl = await ensurePublicImageUrl(formData.image);
+                        const res = await socialMediaService.publishToLinkedIn(socialMediaData.linkedin, publicImageUrl);
                         if (res?.success === true) {
                           setPublishedStatus(prev => ({ ...prev, linkedin: true }));
                           Alert.alert('Éxito', 'Publicado en LinkedIn');
@@ -407,7 +419,8 @@ const EditQuoteScreen = ({ navigation, route }) => {
                     onPress={async () => {
                       try {
                         setPublishing(prev => ({ ...prev, instagram: true }));
-                        const res = await socialMediaService.publishToInstagram(socialMediaData.instagram, formData.image);
+                        const publicImageUrl = await ensurePublicImageUrl(formData.image);
+                        const res = await socialMediaService.publishToInstagram(socialMediaData.instagram, publicImageUrl);
                         if (res?.success === true) {
                           setPublishedStatus(prev => ({ ...prev, instagram: true }));
                           Alert.alert('Éxito', 'Publicado en Instagram');

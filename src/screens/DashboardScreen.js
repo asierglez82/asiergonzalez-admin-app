@@ -269,13 +269,7 @@ const DashboardScreen = ({ navigation }) => {
             icon="add-circle"
             onPress={() => navigation.navigate('ContentEditor')}
           />
-          <ActionCard 
-            title="Ver Analytics"
-            subtitle="Métricas y estadísticas"
-            color="#007AFF"
-            icon="stats-chart"
-            onPress={() => navigation.navigate('Analytics')}
-          />
+          
         </View>
       </View>
 

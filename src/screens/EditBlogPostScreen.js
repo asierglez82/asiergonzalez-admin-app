@@ -16,6 +16,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { blogPostsService } from '../services/firestore';
 import socialMediaService from '../config/socialMediaConfig';
+import { storageService } from '../services/storage';
 
 const { width, height } = Dimensions.get('window');
 
@@ -51,6 +52,7 @@ const EditBlogPostScreen = ({ navigation, route }) => {
     instagram: false,
     twitter: false,
   });
+  const [publishing, setPublishing] = useState({ linkedin: false, instagram: false, twitter: false });
   
   // Form fields - actualizados para coincidir con Firebase
   const [formData, setFormData] = useState({
@@ -122,6 +124,18 @@ const EditBlogPostScreen = ({ navigation, route }) => {
       navigation.goBack();
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Asegurar URL pública de imagen (subir a Storage si no es http/https)
+  const ensurePublicImageUrl = async (imageUrl) => {
+    try {
+      if (!imageUrl) return '';
+      if (/^https?:\/\//i.test(imageUrl)) return imageUrl;
+      const upload = await storageService.uploadImage(imageUrl, 'blog-images');
+      return upload?.success ? upload.url : '';
+    } catch (e) {
+      return '';
     }
   };
 
@@ -386,6 +400,7 @@ const EditBlogPostScreen = ({ navigation, route }) => {
           >
             <Ionicons name="arrow-back" size={isTablet ? 24 : 20} color="#FFFFFF" />
           </TouchableOpacity>
+          {/* Botón de re-publicar en header eliminado; re-publicar está disponible por red en la sección de Redes Sociales */}
         </View>
       </View>
 
@@ -662,6 +677,33 @@ const EditBlogPostScreen = ({ navigation, route }) => {
                     <Ionicons name="send-outline" size={16} color="#FFFFFF" />
                     <Text style={styles.postBtnText}>{publishedStatus.linkedin ? 'Publicado' : 'Publicar'}</Text>
                   </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.postBtn}
+                  onPress={async () => {
+                    try {
+                      setPublishing(prev => ({ ...prev, linkedin: true }));
+                      const publicImageUrl = await ensurePublicImageUrl(formData.image);
+                      const res = await socialMediaService.publishToLinkedIn(socialMediaData.linkedin, publicImageUrl);
+                      if (res?.success) {
+                        setPublishedStatus(prev => ({ ...prev, linkedin: true }));
+                        Alert.alert('Éxito', 'Re-publicado en LinkedIn');
+                      } else {
+                        Alert.alert('Error', res?.error || 'No se pudo re-publicar en LinkedIn');
+                      }
+                    } catch (e) {
+                      Alert.alert('Error', e?.message || 'No se pudo re-publicar en LinkedIn');
+                    } finally {
+                      setPublishing(prev => ({ ...prev, linkedin: false }));
+                    }
+                  }}
+                >
+                  {publishing.linkedin ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Ionicons name="refresh" size={16} color="#FFFFFF" />
+                  )}
+                  <Text style={styles.postBtnText}>{publishing.linkedin ? '...' : 'Re-publicar'}</Text>
+                </TouchableOpacity>
                 </View>
               </View>
               <TextInput
@@ -703,6 +745,33 @@ const EditBlogPostScreen = ({ navigation, route }) => {
                     <Ionicons name="send-outline" size={16} color="#FFFFFF" />
                     <Text style={styles.postBtnText}>{publishedStatus.instagram ? 'Publicado' : 'Publicar'}</Text>
                   </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.postBtn}
+                  onPress={async () => {
+                    try {
+                      setPublishing(prev => ({ ...prev, instagram: true }));
+                      const publicImageUrl = await ensurePublicImageUrl(formData.image);
+                      const res = await socialMediaService.publishToInstagram(socialMediaData.instagram, publicImageUrl);
+                      if (res?.success) {
+                        setPublishedStatus(prev => ({ ...prev, instagram: true }));
+                        Alert.alert('Éxito', 'Re-publicado en Instagram');
+                      } else {
+                        Alert.alert('Error', res?.error || 'No se pudo re-publicar en Instagram');
+                      }
+                    } catch (e) {
+                      Alert.alert('Error', e?.message || 'No se pudo re-publicar en Instagram');
+                    } finally {
+                      setPublishing(prev => ({ ...prev, instagram: false }));
+                    }
+                  }}
+                >
+                  {publishing.instagram ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Ionicons name="refresh" size={16} color="#FFFFFF" />
+                  )}
+                  <Text style={styles.postBtnText}>{publishing.instagram ? '...' : 'Re-publicar'}</Text>
+                </TouchableOpacity>
                 </View>
               </View>
               <TextInput
@@ -744,6 +813,32 @@ const EditBlogPostScreen = ({ navigation, route }) => {
                     <Ionicons name="send-outline" size={16} color="#FFFFFF" />
                     <Text style={styles.postBtnText}>{publishedStatus.twitter ? 'Publicado' : 'Publicar'}</Text>
                   </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.postBtn}
+                  onPress={async () => {
+                    try {
+                      setPublishing(prev => ({ ...prev, twitter: true }));
+                      const res = await socialMediaService.publishToTwitter(socialMediaData.twitter);
+                      if (res?.success) {
+                        setPublishedStatus(prev => ({ ...prev, twitter: true }));
+                        Alert.alert('Éxito', 'Re-publicado en Twitter/X');
+                      } else {
+                        Alert.alert('Error', res?.error || 'No se pudo re-publicar en Twitter/X');
+                      }
+                    } catch (e) {
+                      Alert.alert('Error', e?.message || 'No se pudo re-publicar en Twitter/X');
+                    } finally {
+                      setPublishing(prev => ({ ...prev, twitter: false }));
+                    }
+                  }}
+                >
+                  {publishing.twitter ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Ionicons name="refresh" size={16} color="#FFFFFF" />
+                  )}
+                  <Text style={styles.postBtnText}>{publishing.twitter ? '...' : 'Re-publicar'}</Text>
+                </TouchableOpacity>
                 </View>
               </View>
               <TextInput
@@ -760,19 +855,7 @@ const EditBlogPostScreen = ({ navigation, route }) => {
           <View style={styles.cardAccent} />
         </View>
 
-        {/* Botones de acción */}
-        <View style={styles.actionButtons}>
-          {isDraft && (
-            <TouchableOpacity 
-              style={[styles.publishButton, saving && styles.publishButtonDisabled]} 
-              onPress={handlePublish} 
-              disabled={saving}
-            >
-              <Ionicons name="send-outline" size={18} color="#FFFFFF" />
-              <Text style={styles.publishButtonText}>{saving ? 'Publicando...' : 'Publicar en Web y Redes Sociales'}</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+        {/* Botón de publicar eliminado a petición del usuario */}
       </ScrollView>
     </View>
   );

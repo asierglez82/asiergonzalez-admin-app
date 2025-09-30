@@ -6,7 +6,6 @@ import { AuthProvider, useAuth } from './src/context/AuthContext';
 import LoginScreen from './src/screens/LoginScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
 import ContentEditorScreen from './src/screens/ContentEditorScreen';
-import AnalyticsScreen from './src/screens/AnalyticsScreen';
 import CreatePostScreen from './src/screens/CreatePostScreen';
 import CreateQuoteScreen from './src/screens/CreateQuoteScreen';
 import BlogCRUDScreen from './src/screens/BlogCRUDScreen';
@@ -149,11 +148,7 @@ const AuthenticatedApp = () => {
         component={MediaCRUDScreen}
         options={{ title: 'Gestión Media' }}
       />
-      <Drawer.Screen 
-        name="Analytics" 
-        component={AnalyticsScreen}
-        options={{ title: 'Analytics' }}
-      />
+      
       <Drawer.Screen 
         name="Settings" 
         component={SettingsScreen}

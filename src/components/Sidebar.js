@@ -17,11 +17,7 @@ const Sidebar = ({ navigation, state }) => {
       route: 'ContentEditor',
       description: 'Crear y editar contenido'
     },
-    { 
-      name: 'Analytics', 
-      route: 'Analytics',
-      description: 'Métricas y reportes'
-    },
+    
     { 
       name: 'Configuración', 
       route: 'Settings',

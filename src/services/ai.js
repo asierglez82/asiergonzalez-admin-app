@@ -73,22 +73,31 @@ export function buildComprehensivePrompt({ imageUrl, language, notes, location, 
 
 Basándote en la información proporcionada, genera contenido completo para un post de Asier González (emprendedor y speaker).
 
+⚠️ CRÍTICO - IDIOMA DE SALIDA:
+TODO el contenido generado (phrase, webText, cta, content, title, modalContent, tags, y textos de plataformas) DEBE estar completamente en: ${language === 'es' ? 'ESPAÑOL' : language === 'en' ? 'ENGLISH' : language === 'eu' ? 'EUSKERA' : 'FRANÇAIS'}
+
+Las NOTAS pueden estar en cualquier idioma, pero TODO tu OUTPUT debe estar en el idioma especificado (${language}).
+
 IMPORTANTE: No uses emojis en el contenido generado, solo texto profesional.
 
 INFORMACIÓN DISPONIBLE:
 → IMAGEN: ${imageUrl || 'No proporcionada'}
-→ IDIOMA: ${language}
+→ IDIOMA DE SALIDA: ${language} (${language === 'es' ? 'ESPAÑOL' : language === 'en' ? 'ENGLISH' : language === 'eu' ? 'EUSKERA' : 'FRANÇAIS'})
 → LOCALIZACIÓN: ${location || 'No especificada'}
 → FECHA: ${date || 'No especificada'}
 → EVENTO: ${event || 'No especificado'}
 → PERSONAS: ${people || 'No especificadas'}
-→ NOTAS: ${notes || 'Ninguna'}
+→ NOTAS (pueden estar en otro idioma, pero genera el contenido en ${language}): ${notes || 'Ninguna'}
 
 Genera el siguiente contenido basándote en la información proporcionada:
 
 1. FRASE PRINCIPAL: ${instructions.phrase} (1-2 líneas, inspiradora y profesional)
 2. TEXTO WEB: ${instructions.webText} (120-220 palabras, 2-3 párrafos breves)
 3. CTA: ${instructions.cta} (invita a la conversación)
+4. EXTRACCIONES CONTEXTO: Si faltan datos de contexto, intenta inferirlos de las NOTAS o del propio contenido y devuélvelos:
+   • LOCATION (ciudad/ubicación)
+   • EVENT (evento/lugar)
+   • PEOPLE (personas relevantes)
 
 CONTENIDO HTML PARA QUOTE (campo "content"):
 • Devuélvelo como HTML listo para incrustar, siguiendo este esquema y estilos inline:
@@ -104,25 +113,26 @@ CONTENIDO HTML PARA QUOTE (campo "content"):
   <p>[PÁRRAFO 3 opcional, 40-70 palabras]</p>
 
 • No uses emojis ni listas; solo párrafos.
-• Usa el idioma indicado.
+• TODO el contenido HTML debe estar en ${language === 'es' ? 'ESPAÑOL' : language === 'en' ? 'ENGLISH' : language === 'eu' ? 'EUSKERA' : 'FRANÇAIS'}
 
 CAMPOS DEL BLOG POST:
-4. TÍTULO: Un título atractivo para el blog post (máximo 60 caracteres)
+4. TÍTULO: Un título atractivo para el blog post (máximo 60 caracteres) - EN ${language === 'es' ? 'ESPAÑOL' : language === 'en' ? 'ENGLISH' : language === 'eu' ? 'EUSKERA' : 'FRANÇAIS'}
 5. AUTOR: "Asier González" (siempre este valor)
 6. FECHA: Usa la fecha proporcionada: "${date || 'Fecha no especificada'}"
-7. CONTENIDO MODAL: Contenido HTML completo del blog post (500-1000 palabras)
-8. TAGS: Máximo 2 hashtags relevantes separados por espacios (ej: "#startup #innovación")
+7. CONTENIDO MODAL (modalContent): Contenido HTML completo del blog post (500-1000 palabras) - DEBE estar completamente en ${language === 'es' ? 'ESPAÑOL' : language === 'en' ? 'ENGLISH' : language === 'eu' ? 'EUSKERA' : 'FRANÇAIS'}, independientemente del idioma de las notas
+8. TAGS: Máximo 2 hashtags relevantes separados por espacios (ej: "#startup #innovación") - EN ${language === 'es' ? 'ESPAÑOL' : language === 'en' ? 'ENGLISH' : language === 'eu' ? 'EUSKERA' : 'FRANÇAIS'}
 9. IMAGEN: La imagen será la composición generada automáticamente
 10. MODAL: "mymodal" (siempre este valor)
 11. WIDTH: "1200px" (siempre este valor)
 12. PATH: Ruta del blog post (ej: "/blog/titulo-del-post")
 13. URL: URL completa del blog post (ej: "https://asiergonzalez.es/blog/titulo-del-post")
 14. SLUG: Slug del blog post (ej: "titulo-del-post")
+15. LOCATION/EVENT/PEOPLE: Devuelve estos campos solo si puedes inferirlos con claridad
 
-Para cada red social, adapta el contenido:
-→ LinkedIn: Profesional, con máximo 2 hashtags relevantes (#startup #innovación)
-→ Instagram: Más visual, con máximo 2 hashtags (#startup #buildinpublic)
-→ Twitter: Conciso, máximo 260 caracteres
+Para cada red social, adapta el contenido (TODO en ${language === 'es' ? 'ESPAÑOL' : language === 'en' ? 'ENGLISH' : language === 'eu' ? 'EUSKERA' : 'FRANÇAIS'}):
+→ LinkedIn: Profesional, con máximo 2 hashtags relevantes (#startup #innovación) - EN ${language === 'es' ? 'ESPAÑOL' : language === 'en' ? 'ENGLISH' : language === 'eu' ? 'EUSKERA' : 'FRANÇAIS'}
+→ Instagram: Más visual, con máximo 2 hashtags (#startup #buildinpublic) - EN ${language === 'es' ? 'ESPAÑOL' : language === 'en' ? 'ENGLISH' : language === 'eu' ? 'EUSKERA' : 'FRANÇAIS'}
+→ Twitter: Conciso, máximo 260 caracteres - EN ${language === 'es' ? 'ESPAÑOL' : language === 'en' ? 'ENGLISH' : language === 'eu' ? 'EUSKERA' : 'FRANÇAIS'}
 
 Devuelve un JSON con esta estructura:
 {
@@ -135,6 +145,9 @@ Devuelve un JSON con esta estructura:
   "blogDate": "string",
   "modalContent": "string",
   "tags": "string",
+  "location": "string opcional",
+  "event": "string opcional",
+  "people": "string opcional",
   "modal": "mymodal",
   "width": "1200px",
   "path": "string",

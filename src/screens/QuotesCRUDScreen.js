@@ -104,13 +104,15 @@ const QuotesCRUDScreen = ({ navigation }) => {
       <View style={styles.quoteContent}>
         <View style={styles.titleRow}>
           <Text style={styles.quoteAuthor} numberOfLines={1}>{quote.author}</Text>
-          <View style={[
-            styles.statusBadge,
-            quote?.social?.draft === false ? styles.publishedBadge : styles.draftBadge
-          ]}>
-            <Ionicons name={quote?.social?.draft === false ? 'checkmark-circle' : 'document-outline'} size={12} color="#FFFFFF" />
-            <Text style={styles.statusText}>{quote?.social?.draft === false ? 'Publicado' : 'Borrador'}</Text>
-          </View>
+          {(() => {
+            const isPublished = quote?.draft === false; // Publicado si draft === false
+            return (
+              <View style={[styles.statusBadge, isPublished ? styles.publishedBadge : styles.draftBadge]}>
+                <Ionicons name={isPublished ? 'checkmark-circle' : 'document-outline'} size={12} color="#FFFFFF" />
+                <Text style={styles.statusText}>{isPublished ? 'Publicado' : 'Borrador'}</Text>
+              </View>
+            );
+          })()}
         </View>
         <Text style={styles.quoteWhere} numberOfLines={1}>{quote.where}</Text>
         <Text style={styles.quoteBody} numberOfLines={2}>{stripHtml(quote.content)}</Text>

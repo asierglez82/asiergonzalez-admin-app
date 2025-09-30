@@ -12,6 +12,23 @@ import { blogPostsService } from '../services/firestore';
 import { storageService } from '../services/storage';
 import socialMediaService from '../config/socialMediaConfig';
 
+// Importar la imagen de cabecera
+const contentHeaderImage = require('../../assets/content-header.png');
+
+// Función helper para obtener la URL de la imagen según la plataforma
+const getImageSource = (imageSource) => {
+  if (Platform.OS === 'web') {
+    // En web, el require puede devolver un objeto con .default o directamente la URL
+    if (typeof imageSource === 'string') {
+      return imageSource;
+    }
+    if (imageSource && typeof imageSource === 'object') {
+      return imageSource.default || imageSource.uri || imageSource;
+    }
+  }
+  return imageSource;
+};
+
 // Import dom-to-image solo para web
 let domtoimage;
 if (Platform.OS === 'web') {
@@ -41,6 +58,26 @@ const CreatePostScreen = ({ navigation }) => {
   const [cta, setCta] = useState('');
   const [webText, setWebText] = useState('');
   const [notes, setNotes] = useState('');
+  
+  // Nuevo toggle para tipo de post
+  const [isEvent, setIsEvent] = useState(true);
+
+  // Debug: monitorizar cambios en Event
+  useEffect(() => {
+    try {
+      console.log('[CreatePostScreen] Event state changed:', event);
+    } catch (e) {
+      // noop
+    }
+  }, [event]);
+  
+  // Nuevos campos para Blog Post
+  const [contentTitle, setContentTitle] = useState('');
+  const [contentDescription, setContentDescription] = useState('');
+  const [ctaType, setCtaType] = useState('asiergonzalez'); // 'asiergonzalez', 'aita', 'amaren', 'other'
+  const [customCta, setCustomCta] = useState('');
+  const [source, setSource] = useState('');
+  const [generatingDesc, setGeneratingDesc] = useState(false);
 
   // Campos específicos del blog post (basados en Firebase)
   const [title, setTitle] = useState('');
@@ -102,6 +139,22 @@ const CreatePostScreen = ({ navigation }) => {
   const [showJsonModal, setShowJsonModal] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [generatingCTA, setGeneratingCTA] = useState(false);
+  
+  // Obtener el CTA final según el tipo seleccionado
+  const getFinalCta = () => {
+    switch(ctaType) {
+      case 'asiergonzalez':
+        return 'See more at https://asiergonzalez.es/blog';
+      case 'aita':
+        return 'Download FREE PLAYBOOK at https://aita.ventures';
+      case 'amaren':
+        return 'See more at https://amaren.ventures';
+      case 'other':
+        return customCta;
+      default:
+        return 'See more at https://asiergonzalez.es/blog';
+    }
+  };
   const [uploadedImagePath, setUploadedImagePath] = useState(null);
   const [aiGeneratedFields, setAiGeneratedFields] = useState(new Set());
   const [isDraft, setIsDraft] = useState(true);
@@ -131,6 +184,27 @@ const CreatePostScreen = ({ navigation }) => {
   const generateUrl = (slug) => {
     if (!slug) return '';
     return `https://asiergonzalez.es/blog/${slug}`;
+  };
+
+  // Fallback: derivar nombre de evento desde slug, path o título
+  const deriveEventFromParsed = (parsed) => {
+    try {
+      if (!parsed) return '';
+      if (parsed.slug && typeof parsed.slug === 'string') {
+        return parsed.slug.replace(/-/g, '_');
+      }
+      if (parsed.path && typeof parsed.path === 'string') {
+        const last = parsed.path.split('/').filter(Boolean).pop();
+        return (last || '').replace(/-/g, '_');
+      }
+      if (parsed.title && typeof parsed.title === 'string') {
+        const slugLocal = generateSlug(parsed.title);
+        return (slugLocal || '').replace(/-/g, '_');
+      }
+    } catch (e) {
+      console.warn('[CreatePostScreen] deriveEventFromParsed error:', e);
+    }
+    return '';
   };
 
   // Función para generar path automáticamente
@@ -195,6 +269,7 @@ const CreatePostScreen = ({ navigation }) => {
           const cleanedResponse = cleanAIResponse(result);
           console.log('Cleaned AI response (auto):', cleanedResponse);
           const parsed = JSON.parse(cleanedResponse);
+          console.log('[CreatePostScreen] Parsed AI JSON:', parsed);
           
           // Rellenar campos vacíos con la IA
           if (!location && parsed.location) setLocation(parsed.location);
@@ -298,6 +373,36 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
       setGeneratingCTA(false);
     }
   };
+  
+  const handleGenerateDescription = async () => {
+    try {
+      setGeneratingDesc(true);
+      
+      const prompt = `Genera una descripción para un blog post de Asier González.
+
+IDIOMA: ${language}
+TÍTULO: ${contentTitle || 'Sin título'}
+NOTAS: ${notes || 'Ninguna'}
+
+La descripción debe ser:
+- Informativa y profesional
+- En MAYÚSCULAS
+- Máximo 3-4 líneas
+- En ${language === 'es' ? 'español' : language === 'en' ? 'inglés' : language === 'eu' ? 'euskera' : 'francés'}
+
+Devuelve SOLO la descripción en MAYÚSCULAS, sin comillas ni formato adicional.`;
+
+      const result = await geminiService.generateSmart(prompt);
+      const cleanDesc = result.replace(/^["']|["']$/g, '').trim().toUpperCase();
+      setContentDescription(cleanDesc);
+      
+    } catch (error) {
+      console.error('Error generating description with AI:', error);
+      Alert.alert('Error', 'No se pudo generar la descripción con IA');
+    } finally {
+      setGeneratingDesc(false);
+    }
+  };
 
   // Función para limpiar la respuesta de la IA y extraer JSON
   const cleanAIResponse = (response) => {
@@ -344,9 +449,19 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
           const parsed = JSON.parse(cleanedResponse);
           
           // Rellenar campos de contenido con la IA (no sobrescribir campos de entrada)
-          if (parsed.phrase) setPhrase(parsed.phrase);
+          // No autocompletar 'phrase' aquí; la frase se genera con el botón "IA CTA"
           if (parsed.webText) setWebText(parsed.webText);
           if (parsed.cta) setCta(parsed.cta);
+          if (parsed.event) {
+            console.log('[CreatePostScreen] Setting event from AI:', parsed.event);
+            setEvent(parsed.event);
+          } else {
+            const fallbackEvent = deriveEventFromParsed(parsed);
+            console.log('[CreatePostScreen] AI did not return event. Fallback derived event:', fallbackEvent);
+            if (fallbackEvent) setEvent(fallbackEvent);
+          }
+          // Completar campos contextuales si vienen en la respuesta
+          if (parsed.event) setEvent(parsed.event);
           
           // Completar campos del blog post
           const generatedFields = new Set();
@@ -618,6 +733,11 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
             genLinkedin,
             genInstagram,
             genTwitter
+          },
+          published: {
+            linkedin: false,
+            instagram: false,
+            twitter: false
           }
         }
       };
@@ -790,10 +910,29 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
         try {
           console.log('Publicando en redes sociales automáticamente...');
           // Usar la imagen de la composición o la imagen URL
-          const imageToUse = finalImageUrl || imageUrl;
-          
+          let imageToUse = finalImageUrl || imageUrl;
+          console.log('[CreatePostScreen] Imagen inicial para redes:', imageToUse);
+
+          // Si no es una URL http(s) (e.g., base64 o ruta local), subir a Storage para tener URL pública
+          if (imageToUse && !/^https?:\/\//i.test(imageToUse)) {
+            try {
+              console.log('[CreatePostScreen] Imagen no es URL pública. Subiendo a Storage...');
+              const uploadResult = await storageService.uploadImage(imageToUse, 'blog-images');
+              if (uploadResult?.success && uploadResult.url) {
+                imageToUse = uploadResult.url;
+                console.log('[CreatePostScreen] Imagen subida. URL pública:', imageToUse);
+              } else {
+                console.warn('[CreatePostScreen] Falló subida a Storage, se publicará sin imagen');
+                imageToUse = null;
+              }
+            } catch (uploadErr) {
+              console.warn('[CreatePostScreen] Error subiendo imagen para redes:', uploadErr?.message || uploadErr);
+              imageToUse = null;
+            }
+          }
+
           const result = await socialMediaService.publishToMultiplePlatforms(
-            platformsContent, 
+            platformsContent,
             imageToUse
           );
           
@@ -856,6 +995,32 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
       </View>
 
       <View style={styles.grid}>
+        {/* Toggle Tipo de Post */}
+        <View style={styles.fieldCard}>
+          <View style={[styles.iconSquare, { backgroundColor: '#00ca77', borderColor: '#00ca77' }]}>
+            <Ionicons name="options-outline" size={18} color="#ffffff" />
+          </View>
+          <View style={styles.fieldContent}>
+            <Text style={styles.label}>Tipo de Publicación</Text>
+            <View style={styles.toggleRow}>
+              <Text style={styles.toggleLabel}>{isEvent ? 'Evento' : 'Blog Post'}</Text>
+              <Switch 
+                value={isEvent} 
+                onValueChange={setIsEvent}
+                trackColor={{ false: '#9A7AFF', true: '#00ca77' }}
+                thumbColor={isEvent ? '#FFFFFF' : '#FFFFFF'}
+              />
+            </View>
+            <Text style={styles.toggleHelper}>
+              {isEvent ? 'Modo Evento: incluye localización, fecha, lugar y personas' : 'Modo Blog Post: incluye cabecera, título y descripción del contenido'}
+            </Text>
+          </View>
+          <View style={[styles.cardAccent, { backgroundColor: '#00ca77' }]} />
+        </View>
+        
+        {/* Campos de Evento - Solo si isEvent es true */}
+        {isEvent && (
+          <>
         {/* Imagen */}
         <View style={styles.fieldCard}>
           <View style={[styles.iconSquare, { backgroundColor: '#00ca77', borderColor: '#00ca77' }]}>
@@ -889,7 +1054,6 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
         </View>
 
         
-
         {/* Localización */}
         <View style={styles.fieldCard}>
           <View style={[styles.iconSquare, { backgroundColor: '#00ca77', borderColor: '#00ca77' }]}>
@@ -970,6 +1134,86 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
           </View>
           <View style={[styles.cardAccent, { backgroundColor: '#00ca77' }]} />
         </View>
+        </>
+        )}
+        
+        {/* Campos de Blog Post - Solo si NO es evento */}
+        {!isEvent && (
+          <>
+        {/* Fuente */}
+        <View style={styles.fieldCard}>
+          <View style={[styles.iconSquare, { backgroundColor: '#9A7AFF', borderColor: '#9A7AFF' }]}>
+            <Ionicons name="document-outline" size={18} color="#ffffff" />
+          </View>
+          <View style={styles.fieldContent}>
+            <Text style={styles.label}>Fuente</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Ej: Harvard Business Review, Forbes, etc."
+              placeholderTextColor="rgba(255,255,255,0.4)"
+              value={source}
+              onChangeText={setSource}
+            />
+          </View>
+          <View style={[styles.cardAccent, { backgroundColor: '#9A7AFF' }]} />
+        </View>
+        
+        {/* Selector de CTA */}
+        <View style={styles.fieldCard}>
+          <View style={[styles.iconSquare, { backgroundColor: '#9A7AFF', borderColor: '#9A7AFF' }]}>
+            <Ionicons name="link-outline" size={18} color="#ffffff" />
+          </View>
+          <View style={styles.fieldContent}>
+            <Text style={styles.label}>Call to Action</Text>
+            <View style={styles.ctaOptions}>
+              <TouchableOpacity 
+                style={[styles.ctaOption, ctaType === 'asiergonzalez' && styles.ctaOptionActive]}
+                onPress={() => setCtaType('asiergonzalez')}
+              >
+                <Text style={[styles.ctaOptionText, ctaType === 'asiergonzalez' && styles.ctaOptionTextActive]}>
+                  asiergonzalez.es/blog
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.ctaOption, ctaType === 'aita' && styles.ctaOptionActive]}
+                onPress={() => setCtaType('aita')}
+              >
+                <Text style={[styles.ctaOptionText, ctaType === 'aita' && styles.ctaOptionTextActive]}>
+                  aita.ventures
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.ctaOption, ctaType === 'amaren' && styles.ctaOptionActive]}
+                onPress={() => setCtaType('amaren')}
+              >
+                <Text style={[styles.ctaOptionText, ctaType === 'amaren' && styles.ctaOptionTextActive]}>
+                  amaren.ventures
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.ctaOption, ctaType === 'other' && styles.ctaOptionActive]}
+                onPress={() => setCtaType('other')}
+              >
+                <Text style={[styles.ctaOptionText, ctaType === 'other' && styles.ctaOptionTextActive]}>
+                  Otro
+                </Text>
+              </TouchableOpacity>
+            </View>
+            {ctaType === 'other' && (
+              <TextInput
+                style={[styles.input, { marginTop: 8 }]}
+                placeholder="URL personalizada..."
+                placeholderTextColor="rgba(255,255,255,0.4)"
+                value={customCta}
+                onChangeText={setCustomCta}
+              />
+            )}
+            <Text style={styles.ctaPreview}>Preview: {getFinalCta()}</Text>
+          </View>
+          <View style={[styles.cardAccent, { backgroundColor: '#9A7AFF' }]} />
+        </View>
+        </>
+        )}
 
         {/* Idioma */}
         <View style={styles.fieldCard}>
@@ -1060,6 +1304,9 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
                 transform: 'translate(0, 0)'
               }}
             >
+              {/* Contenido para EVENTO */}
+              {isEvent && (
+              <>
               <div style={{
                 backgroundColor: '#2c3e50',
                 padding: isTablet ? '15px 30px' : isMobile ? '10px 20px' : '20px 40px',
@@ -1224,10 +1471,98 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
                 lineHeight: isTablet ? '34px' : isMobile ? '22px' : '48px',
                 marginTop: isTablet ? '0px' : isMobile ? '-10px' : '10px'
               }}>"{phrase}"</div>
+              </>
+              )}
+              
+              {/* Contenido para BLOG POST */}
+              {!isEvent && (
+              <>
+              {/* Imagen de la cabecera */}
+              <img 
+                src={getImageSource(contentHeaderImage)}
+                style={{
+                  width: 'calc(100% - 80px)',
+                  height: 'auto',
+                  position: 'absolute',
+                  top: isTablet ? '40px' : isMobile ? '30px' : '60px',
+                  left: '40px',
+                  right: '40px',
+                  objectFit: 'contain',
+                  zIndex: 1
+                }}
+                alt="Header"
+                onError={(e) => {
+                  console.log('Error loading header image:', e);
+                  console.log('Image src:', e.target.src);
+                  console.log('contentHeaderImage object:', contentHeaderImage);
+                  console.log('contentHeaderImage type:', typeof contentHeaderImage);
+                  console.log('contentHeaderImage keys:', contentHeaderImage ? Object.keys(contentHeaderImage) : 'null');
+                }}
+              />
+              
+              
+              
+              {/* Frase */}
+              <div style={{
+                color: '#333b4d',
+                fontSize: isTablet ? '48px' : isMobile ? '32px' : '68px',
+                fontWeight: '300',
+                fontFamily: 'Satoshi-Light, -apple-system, BlinkMacSystemFont, sans-serif',
+                fontStyle: 'italic',
+                textAlign: 'center',
+                lineHeight: isTablet ? '64px' : isMobile ? '44px' : '88px',
+                marginTop: isTablet ? '190px' : isMobile ? '70px' : '330px',
+                maxWidth: isTablet ? '600px' : isMobile ? '260px' : '800px'
+              }}>"{phrase}"</div>
+              
+              {/* Fuente */}
+              {source && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: source ? (isTablet ? '90px' : isMobile ? '70px' : '110px') : 'auto',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  color: '#666666',
+                  fontSize: isTablet ? '14px' : isMobile ? '10px' : '18px',
+                  fontWeight: '400',
+                  fontFamily: 'Satoshi, -apple-system, BlinkMacSystemFont, sans-serif',
+                  textAlign: 'center',
+                  fontStyle: 'italic',
+                  zIndex: 3
+                }}>
+                  Source: {source}
+                </div>
+              )}
+              
+              {/* CTA */}
+              <div style={{
+                position: 'absolute',
+                bottom: isTablet ? '30px' : isMobile ? '20px' : '40px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                color: '#2c3e50',
+                fontSize: isTablet ? '16px' : isMobile ? '11px' : '22px',
+                fontWeight: '700',
+                fontFamily: 'Satoshi, -apple-system, BlinkMacSystemFont, sans-serif',
+                textAlign: 'center',
+                backgroundColor: '#FFFFFF',
+                padding: isTablet ? '12px 40px' : isMobile ? '8px 24px' : '16px 48px',
+                borderRadius: isTablet ? '8px' : isMobile ? '6px' : '12px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                whiteSpace: 'nowrap',
+                zIndex: 3
+              }}>
+                {getFinalCta()}
+              </div>
+              </>
+              )}
             </div>
           ) : (
             <ViewShot ref={composeRef} style={[styles.composeContainer, isTablet && styles.composeContainerTablet, isMobile && styles.composeContainerMobile]} options={{ format: 'png', quality: 1 }}>
               <View style={[styles.composeBg, isTablet && styles.composeBgTablet, isMobile && styles.composeBgMobile]}>
+                {/* Contenido para EVENTO */}
+                {isEvent && (
+                <>
                 <View style={[styles.composeWhiteBox, isTablet && styles.composeWhiteBoxTablet, isMobile && styles.composeWhiteBoxMobile]}>
                   {imageUrl ? (
                     <Image source={{ uri: imageUrl }} style={[styles.composePhoto, isTablet && styles.composePhotoTablet, isMobile && styles.composePhotoMobile]} resizeMode="cover" />
@@ -1274,6 +1609,91 @@ Devuelve SOLO la frase, sin comillas ni formato adicional.`;
                   <Text style={[styles.composeButtonText, isTablet && styles.composeButtonTextTablet, isMobile && styles.composeButtonTextMobile]}>ASIER GONZALEZ</Text>
                 </View>
                 <Text style={[styles.composePhrase, isTablet && styles.composePhraseTablet, isMobile && styles.composePhraseMobile]}>"{phrase}"</Text>
+                </>
+                )}
+                
+                {/* Contenido para BLOG POST (móvil) */}
+                {!isEvent && (
+                <>
+                {/* Imagen de la cabecera */}
+                <Image 
+                  source={contentHeaderImage}
+                  style={{
+                    width: isTablet ? 720 : isMobile ? 290 : 960,
+                    height: 'auto',
+                    position: 'absolute',
+                    top: isTablet ? 40 : isMobile ? 30 : 60,
+                    left: isTablet ? 40 : isMobile ? 30 : 60,
+                    zIndex: 1
+                  }}
+                  resizeMode="contain"
+                />
+                
+                {/* Frase */}
+                <Text style={{
+                  color: '#333b4d',
+                  fontSize: isTablet ? 48 : isMobile ? 32 : 68,
+                  fontWeight: '300',
+                  fontFamily: 'Satoshi-Light',
+                  fontStyle: 'italic',
+                  textAlign: 'center',
+                  lineHeight: isTablet ? 64 : isMobile ? 44 : 88,
+                  marginTop: isTablet ? 190 : isMobile ? 70 : 330,
+                  maxWidth: isTablet ? 600 : isMobile ? 260 : 800
+                }}>
+                  "{phrase}"
+                </Text>
+                
+                {/* Fuente */}
+                {source && (
+                  <Text style={{
+                    position: 'absolute',
+                    bottom: isTablet ? 90 : isMobile ? 70 : 110,
+                    left: 0,
+                    right: 0,
+                    color: '#666666',
+                    fontSize: isTablet ? 14 : isMobile ? 10 : 18,
+                    fontWeight: '400',
+                    fontFamily: 'Satoshi',
+                    textAlign: 'center',
+                    fontStyle: 'italic',
+                    zIndex: 3
+                  }}>
+                    Source: {source}
+                  </Text>
+                )}
+                
+                {/* CTA */}
+                <View style={{
+                  position: 'absolute',
+                  bottom: isTablet ? 30 : isMobile ? 20 : 40,
+                  left: '50%',
+                  transform: [{ translateX: -150 }],
+                  backgroundColor: '#FFFFFF',
+                  padding: isTablet ? 12 : isMobile ? 8 : 16,
+                  paddingHorizontal: isTablet ? 40 : isMobile ? 24 : 48,
+                  borderRadius: isTablet ? 8 : isMobile ? 6 : 12,
+                  alignSelf: 'center',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 12,
+                  elevation: 5,
+                  zIndex: 3,
+                  maxWidth: isTablet ? 500 : isMobile ? 300 : 600
+                }}>
+                  <Text style={{
+                    color: '#2c3e50',
+                    fontSize: isTablet ? 16 : isMobile ? 11 : 22,
+                    fontWeight: '700',
+                    fontFamily: 'Satoshi',
+                    textAlign: 'center'
+                  }}>
+                    {getFinalCta()}
+                  </Text>
+                </View>
+                </>
+                )}
               </View>
             </ViewShot>
           )}
@@ -2711,6 +3131,50 @@ const styles = StyleSheet.create({
     color: '#64D2FF',
     fontSize: 14,
     fontWeight: '600',
+  },
+  toggleHelper: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 12,
+    fontStyle: 'italic',
+    marginTop: 8,
+    lineHeight: 16,
+  },
+  ctaOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
+  },
+  ctaOption: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(154, 122, 255, 0.3)',
+    backgroundColor: 'rgba(154, 122, 255, 0.1)',
+    minWidth: '22%',
+  },
+  ctaOptionActive: {
+    backgroundColor: 'rgba(154, 122, 255, 0.25)',
+    borderColor: '#9A7AFF',
+  },
+  ctaOptionText: {
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  ctaOptionTextActive: {
+    color: '#9A7AFF',
+  },
+  ctaPreview: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 12,
+    marginTop: 12,
+    fontStyle: 'italic',
+    backgroundColor: 'rgba(154, 122, 255, 0.1)',
+    padding: 8,
+    borderRadius: 6,
   },
 });
 
