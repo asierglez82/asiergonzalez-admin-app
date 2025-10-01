@@ -34,3 +34,4 @@ npm run android  # Para Android
 ---
 
 **🎉 Parte del ecosistema digital de asiergonzalez.es**
+# Fix: Iconos no se mostraban en producción - Build actualizado Wed Oct  1 19:48:36 CEST 2025
