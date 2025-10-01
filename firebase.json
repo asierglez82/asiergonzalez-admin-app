@@ -8,17 +8,21 @@
     ],
     "rewrites": [
       {
-        "source": "**",
+        "source": "!**/*.@(ttf|woff|woff2|eot|otf|js|css|png|jpg|jpeg|gif|svg|ico|json|html)",
         "destination": "/index.html"
       }
     ],
     "headers": [
       {
-        "source": "**/*.@(eot|otf|ttf|ttc|woff|font.css)",
+        "source": "**/*.@(eot|otf|ttf|ttc|woff|woff2|font.css)",
         "headers": [
           {
             "key": "Access-Control-Allow-Origin",
             "value": "*"
+          },
+          {
+            "key": "Content-Type",
+            "value": "font/ttf"
           }
         ]
       },
