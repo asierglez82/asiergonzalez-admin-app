@@ -8,6 +8,7 @@ import DashboardScreen from './src/screens/DashboardScreen';
 import ContentEditorScreen from './src/screens/ContentEditorScreen';
 import CreatePostScreen from './src/screens/CreatePostScreen';
 import CreateQuoteScreen from './src/screens/CreateQuoteScreen';
+import CreateBookScreen from './src/screens/CreateBookScreen';
 import BlogCRUDScreen from './src/screens/BlogCRUDScreen';
 import EditBlogPostScreen from './src/screens/EditBlogPostScreen';
 import ProjectsCRUDScreen from './src/screens/ProjectsCRUDScreen';
@@ -15,6 +16,7 @@ import QuotesCRUDScreen from './src/screens/QuotesCRUDScreen';
 import EditQuoteScreen from './src/screens/EditQuoteScreen';
 import PodcastCRUDScreen from './src/screens/PodcastCRUDScreen';
 import BooksCRUDScreen from './src/screens/BooksCRUDScreen';
+import EditBookScreen from './src/screens/EditBookScreen';
 import ConferencesCRUDScreen from './src/screens/ConferencesCRUDScreen';
 import TalksCRUDScreen from './src/screens/TalksCRUDScreen';
 import InfographicsCRUDScreen from './src/screens/InfographicsCRUDScreen';
@@ -94,6 +96,11 @@ const AuthenticatedApp = () => {
         options={{ title: 'Nueva Quote' }}
       />
       <Drawer.Screen 
+        name="CreateBook" 
+        component={CreateBookScreen}
+        options={{ title: 'Nueva Reseña de Libro' }}
+      />
+      <Drawer.Screen 
         name="BlogCRUD" 
         component={BlogCRUDScreen}
         options={{ title: 'Gestión Blog' }}
@@ -127,6 +134,11 @@ const AuthenticatedApp = () => {
         name="BooksCRUD" 
         component={BooksCRUDScreen}
         options={{ title: 'Gestión Libros' }}
+      />
+      <Drawer.Screen 
+        name="EditBook" 
+        component={EditBookScreen}
+        options={{ title: 'Editar Libro' }}
       />
       <Drawer.Screen 
         name="ConferencesCRUD" 

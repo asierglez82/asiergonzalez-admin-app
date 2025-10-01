@@ -154,6 +154,9 @@ const Sidebar = ({ navigation, state }) => {
           <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('CreateQuote')}>
             <Text style={styles.actionText}>New Quote</Text>
           </TouchableOpacity>
+          <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('CreateBook')}>
+            <Text style={styles.actionText}>New Book</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.actionButton} onPress={() => Linking.openURL('https://asiergonzalez.es')}>
             <Text style={styles.actionText}>View Website</Text>
           </TouchableOpacity>
