@@ -161,7 +161,7 @@ const BooksCRUDScreen = ({ navigation }) => {
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.iconHeaderButton}
-            onPress={() => navigation.goBack()}
+            onPress={() => navigation.navigate('ContentEditor')}
           >
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
