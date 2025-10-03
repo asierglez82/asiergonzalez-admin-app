@@ -39,11 +39,31 @@ const LinkedInAuth = ({ onAuthSuccess, onAuthError }) => {
               const data = event?.data || {};
               console.log('📨 Mensaje recibido:', data);
               if (data?.type === 'expo-web-browser' && typeof data?.url === 'string') {
+                console.log('🔍 Verificando URL:', data.url);
+                console.log('🔍 REDIRECT_URI esperada:', REDIRECT_URI);
+                console.log('🔍 ¿Coincide?', data.url.startsWith(REDIRECT_URI));
+                
                 if (data.url.startsWith(REDIRECT_URI)) {
+                  console.log('✅ URL coincide, extrayendo código...');
                   window.removeEventListener('message', onMessage);
                   clearTimeout(timeoutId);
-                  resolve(new URL(data.url).searchParams.get('code'));
+                  const url = new URL(data.url);
+                  const code = url.searchParams.get('code');
+                  console.log('🔑 Código extraído:', code ? code.substring(0, 15) + '...' : 'NO ENCONTRADO');
+                  resolve(code);
+                } else if (data.url.includes('/auth/linkedin/callback') && data.url.includes('code=')) {
+                  console.log('✅ URL contiene callback y código, extrayendo...');
+                  window.removeEventListener('message', onMessage);
+                  clearTimeout(timeoutId);
+                  const url = new URL(data.url);
+                  const code = url.searchParams.get('code');
+                  console.log('🔑 Código extraído (alternativo):', code ? code.substring(0, 15) + '...' : 'NO ENCONTRADO');
+                  resolve(code);
+                } else {
+                  console.log('❌ URL no coincide con redirect URI esperado');
                 }
+              } else {
+                console.log('❌ Mensaje no válido o no es de expo-web-browser');
               }
             } catch (error) {
               console.error('❌ Error procesando mensaje:', error);
