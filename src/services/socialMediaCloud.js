@@ -6,8 +6,13 @@ const RAW_CF_URL = process.env.EXPO_PUBLIC_CLOUD_FUNCTION_URL || 'https://europe
 const CLOUD_FUNCTION_URL = RAW_CF_URL.replace('socialCredentials', 'social-credentials');
 console.log('[socialMediaCloud] 🌐 CF URL en uso:', CLOUD_FUNCTION_URL);
 
-// Flag para activar publicación real desde cloud (por defecto desactivado para evitar falsos positivos)
-const ENABLE_CLOUD_PUBLISH = process.env.EXPO_PUBLIC_ENABLE_CLOUD_PUBLISH === 'true';
+// Flag para activar publicación real desde cloud
+const ENABLE_CLOUD_PUBLISH = process.env.EXPO_PUBLIC_ENABLE_CLOUD_PUBLISH === 'true' || 
+  (typeof window !== 'undefined' && (
+    window.location.hostname === 'app.asiergonzalez.es' || 
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1'
+  ));
 console.log('[socialMediaCloud] ENABLE_CLOUD_PUBLISH:', ENABLE_CLOUD_PUBLISH, 'raw:', process.env.EXPO_PUBLIC_ENABLE_CLOUD_PUBLISH);
 if (!ENABLE_CLOUD_PUBLISH) {
   console.log('[socialMediaCloud] ⚠️ Publicación cloud en modo DEMO (no se realizan publicaciones reales).');

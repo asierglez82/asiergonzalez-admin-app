@@ -31,11 +31,13 @@ const LinkedInAuth = ({ onAuthSuccess, onAuthError }) => {
 
       // Flujo específico para Web: escuchar manualmente el postMessage del callback
       if (Platform.OS === 'web') {
+        console.log('🌐 Usando flujo web con postMessage');
         const codeFromMessage = await new Promise(async (resolve, reject) => {
           let timeoutId;
           const onMessage = (event) => {
             try {
               const data = event?.data || {};
+              console.log('📨 Mensaje recibido:', data);
               if (data?.type === 'expo-web-browser' && typeof data?.url === 'string') {
                 if (data.url.startsWith(REDIRECT_URI)) {
                   window.removeEventListener('message', onMessage);
@@ -43,7 +45,9 @@ const LinkedInAuth = ({ onAuthSuccess, onAuthError }) => {
                   resolve(new URL(data.url).searchParams.get('code'));
                 }
               }
-            } catch (_) {}
+            } catch (error) {
+              console.error('❌ Error procesando mensaje:', error);
+            }
           };
           window.addEventListener('message', onMessage);
           // Abrir en una nueva pestaña/ventana
@@ -63,33 +67,47 @@ const LinkedInAuth = ({ onAuthSuccess, onAuthError }) => {
       }
 
       // Flujo estándar (nativo y fallback web)
+      console.log('🔄 Abriendo sesión de autorización...');
       const result = await WebBrowser.openAuthSessionAsync(authUrl, REDIRECT_URI);
-      console.log('ℹ️ openAuthSessionAsync result.type:', result?.type);
+      console.log('ℹ️ openAuthSessionAsync result:', result);
 
       if (result.type === 'success' && result.url) {
         console.log('✅ [PASO 1] Ventana cerrada con éxito. URL recibida:', result.url);
         const url = new URL(result.url);
-        // Verificamos que la URL recibida sea la correcta, aunque el cierre se haya activado antes
+        
+        // Verificamos que la URL recibida sea la correcta
         if (!url.pathname.startsWith('/auth/linkedin/callback')) {
-          throw new Error('La redirección no fue a la URL de callback esperada.');
+          throw new Error(`La redirección no fue a la URL de callback esperada. Recibido: ${url.pathname}`);
         }
+        
         const params = new URLSearchParams(url.search);
         const code = params.get('code');
         const returnedState = params.get('state');
+        const error = params.get('error');
+        const errorDescription = params.get('error_description');
+
+        console.log('🔍 Parámetros recibidos:', { code: code ? 'presente' : 'ausente', state: returnedState, error, errorDescription });
+
+        if (error) {
+          throw new Error(`Error de LinkedIn: ${error} - ${errorDescription || 'Sin descripción'}`);
+        }
 
         if (returnedState !== STATE) {
-          throw new Error('El parámetro STATE no coincide');
+          throw new Error(`El parámetro STATE no coincide. Esperado: ${STATE}, Recibido: ${returnedState}`);
         }
 
         if (code) {
           console.log('✅ [PASO 2] Código de autorización extraído:', (code || '').substring(0, 15) + '...');
           onAuthSuccess?.(code);
         } else {
-          const errorDescription = params.get('error_description') || 'No se recibió el código de autorización.';
-          throw new Error(errorDescription);
+          throw new Error('No se recibió el código de autorización de LinkedIn');
         }
       } else if (result.type === 'cancel' || result.type === 'dismiss') {
         console.log('👋 Autorización cancelada por el usuario');
+        throw new Error('Autorización cancelada por el usuario');
+      } else {
+        console.log('❌ Resultado inesperado:', result);
+        throw new Error(`Resultado inesperado de la autorización: ${result.type}`);
       }
 
     } catch (error) {

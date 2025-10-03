@@ -2,69 +2,129 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Procesando autorización...</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkedIn Callback</title>
     <style>
-        body { 
-            font-family: sans-serif; 
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             margin: 0;
-            background-color: #f0f2f5;
+            background: linear-gradient(135deg, #0077b5, #005885);
+            color: white;
         }
-        div {
+        .container {
             text-align: center;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .error {
+            color: #ff6b6b;
+            background: rgba(255, 107, 107, 0.1);
+            padding: 1rem;
+            border-radius: 5px;
+            margin-top: 1rem;
         }
     </style>
 </head>
 <body>
-    <div>
-        <h1>¡Autorización completada!</h1>
-        <p>Puedes cerrar esta pestaña y volver a la aplicación.</p>
+    <div class="container">
+        <div class="spinner"></div>
+        <h2>Procesando autorización de LinkedIn...</h2>
+        <p>Por favor espera mientras completamos la autorización.</p>
+        <div id="error" class="error" style="display: none;"></div>
     </div>
+
     <script>
-        (function () {
+        console.log('🔗 LinkedIn Callback Page loaded');
+        console.log('📍 Current URL:', window.location.href);
+        console.log('🔍 URL Search:', window.location.search);
+
+        // Función para enviar el resultado a la ventana padre
+        function sendResultToParent(result) {
             try {
-                // Construir el payload con la URL completa (incluyendo ?code=...&state=...)
-                var payload = {
-                    type: 'expo-web-browser',
-                    url: window.location.href
-                };
-
-                // Función para enviar el mensaje a todos los destinos posibles
-                function postToAllTargets() {
-                    try {
-                        if (window.opener && !window.opener.closed) {
-                            window.opener.postMessage(payload, '*');
-                        }
-                    } catch (_) {}
-                    try {
-                        if (window.parent && window.parent !== window) {
-                            window.parent.postMessage(payload, '*');
-                        }
-                    } catch (_) {}
+                if (window.opener) {
+                    console.log('📤 Enviando resultado a ventana padre:', result);
+                    window.opener.postMessage({
+                        type: 'expo-web-browser',
+                        url: window.location.href
+                    }, '*');
+                    // Esperar un poco antes de cerrar para asegurar que el mensaje se envíe
+                    setTimeout(() => {
+                        window.close();
+                    }, 100);
+                } else {
+                    console.log('⚠️ No hay ventana padre, intentando redireccionar...');
+                    // Fallback: intentar redireccionar a la app principal
+                    window.location.href = window.location.origin + '/';
                 }
-
-                // Envío inmediato
-                postToAllTargets();
-
-                // Reintentos durante ~4s para asegurar recepción del listener
-                var attempts = 0;
-                var maxAttempts = 10; // 20 * 200ms = 4s
-                var interval = setInterval(function () {
-                    attempts += 1;
-                    postToAllTargets();
-                    if (attempts >= maxAttempts) {
-                        clearInterval(interval);
-                        try { window.close(); } catch (_) {}
-                    }
-                }, 200);
-            } catch (e) {
-                // En caso de que no se pueda cerrar automáticamente, al menos no romper la UI
-                console.error('Error enviando mensaje de callback:', e);
+            } catch (error) {
+                console.error('❌ Error enviando resultado:', error);
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('error').textContent = 'Error procesando autorización: ' + error.message;
             }
-        })();
+        }
+
+        // Función para mostrar error
+        function showError(message) {
+            console.error('❌ Error en callback:', message);
+            document.getElementById('error').style.display = 'block';
+            document.getElementById('error').textContent = message;
+        }
+
+        // Procesar la URL actual
+        function processCallback() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            const error = urlParams.get('error');
+            const errorDescription = urlParams.get('error_description');
+            const state = urlParams.get('state');
+
+            console.log('🔍 Parámetros de callback:', { code: code ? 'presente' : 'ausente', error, errorDescription, state });
+
+            if (error) {
+                showError(`Error de LinkedIn: ${error} - ${errorDescription || 'Sin descripción'}`);
+                return;
+            }
+
+            if (!code) {
+                showError('No se recibió el código de autorización de LinkedIn');
+                return;
+            }
+
+            // Enviar resultado exitoso
+            sendResultToParent({ success: true, code, state });
+        }
+
+        // Ejecutar cuando la página se carga
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('📄 DOM cargado, procesando callback...');
+            processCallback();
+        });
+
+        // También ejecutar inmediatamente por si el DOM ya está cargado
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', processCallback);
+        } else {
+            processCallback();
+        }
     </script>
 </body>
 </html>

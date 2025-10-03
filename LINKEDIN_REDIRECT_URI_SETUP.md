@@ -48,8 +48,16 @@ EXPO_PUBLIC_CLOUD_FUNCTION_URL=https://europe-west1-asiergonzalez-web-app.cloudf
 
 ## 🔍 URLs que debe tener registradas LinkedIn:
 
-1. `http://localhost:8081/auth/linkedin/callback/` (desarrollo)
-2. `https://tu-dominio-real.com/auth/linkedin/callback/` (producción)
+1. ✅ `http://localhost:8081/auth/linkedin/callback/` (desarrollo)
+2. ✅ `https://app.asiergonzalez.es/auth/linkedin/callback/` (producción)
+
+## 📄 Archivo de callback incluido:
+
+He creado un archivo `public/auth/linkedin/callback/index.html` que:
+- Procesa la respuesta de LinkedIn
+- Envía el código de autorización a la ventana padre
+- Maneja errores de forma elegante
+- Funciona tanto en desarrollo como en producción
 
 ## ⚠️ Notas importantes:
 
