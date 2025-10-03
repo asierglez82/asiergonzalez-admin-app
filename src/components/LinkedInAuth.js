@@ -9,7 +9,9 @@ const LinkedInAuth = ({ onAuthSuccess, onAuthError }) => {
 
   // Configuración de LinkedIn OAuth
   const LINKEDIN_CLIENT_ID = '77nofg3l51f0kb';
-  const REDIRECT_URI = 'http://localhost:8081/auth/linkedin/callback/';
+  const REDIRECT_URI = typeof window !== 'undefined' 
+    ? `${window.location.origin}/auth/linkedin/callback/`
+    : 'http://localhost:8081/auth/linkedin/callback/';
   const SCOPE = 'openid profile email w_member_social';
   const STATE = 'linkedin_auth_' + Date.now();
 
