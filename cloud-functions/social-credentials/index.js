@@ -421,9 +421,35 @@ async function handlePublishLinkedIn(req, res, userId) {
         if (!imageResp.ok) {
           throw new Error(`No se pudo descargar la imagen: ${imageResp.status}`);
         }
-        const imageBuffer = await imageResp.buffer();
+        let imageBuffer = await imageResp.buffer();
         
-        console.log('[CF] ✅ Imagen descargada, tamaño:', imageBuffer.length);
+        console.log('[CF] ✅ Imagen descargada, tamaño original:', imageBuffer.length, 'bytes');
+
+        // Paso 2.5: Optimizar imagen para LinkedIn (redimensionar a 1200x1200 y comprimir a JPEG)
+        try {
+          const sharp = require('sharp');
+          const metadata = await sharp(imageBuffer).metadata();
+          console.log('[CF] 📐 Dimensiones originales:', metadata.width, 'x', metadata.height, 'formato:', metadata.format);
+          
+          // Optimizar a JPEG de máxima calidad para LinkedIn (ideal para texto)
+          imageBuffer = await sharp(imageBuffer)
+            .resize(1080, 1080, {
+              fit: 'cover',
+              position: 'center',
+              kernel: 'lanczos3' // Mejor algoritmo para preservar detalles/texto
+            })
+            .jpeg({
+              quality: 100,
+              chromaSubsampling: '4:4:4', // Sin pérdida de color
+              mozjpeg: true // Usa MozJPEG para mejor calidad
+            })
+            .toBuffer();
+          
+          console.log('[CF] ✅ Imagen optimizada para LinkedIn: 1080x1080px JPEG Q100, tamaño:', imageBuffer.length, 'bytes');
+        } catch (optimizeError) {
+          console.warn('[CF] ⚠️ Error optimizando imagen, usando original:', optimizeError.message);
+          // Continuar con la imagen original si falla la optimización
+        }
 
         // Paso 3: Subir la imagen a LinkedIn
         const uploadResp = await fetch(uploadUrl, {
