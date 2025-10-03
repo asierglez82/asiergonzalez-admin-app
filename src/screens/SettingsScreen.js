@@ -79,7 +79,7 @@ const SettingsScreen = ({ navigation }) => {
     try {
       console.log('🔄 [PASO 4] Llamando a la Cloud Function para intercambiar el token...');
       
-      const response = await fetch('https://europe-west1-asiergonzalez-web-app.cloudfunctions.net/socialCredentials', {
+      const response = await fetch('https://europe-west1-asiergonzalez-web-app.cloudfunctions.net/social-credentials', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -120,7 +120,7 @@ const SettingsScreen = ({ navigation }) => {
   const exchangeInstagramCodeForToken = async (code) => {
     try {
       console.log('🔄 [IG PASO 4] Llamando a la Cloud Function para intercambiar el token de Instagram...');
-      const response = await fetch('https://europe-west1-asiergonzalez-web-app.cloudfunctions.net/socialCredentials', {
+      const response = await fetch('https://europe-west1-asiergonzalez-web-app.cloudfunctions.net/social-credentials', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
