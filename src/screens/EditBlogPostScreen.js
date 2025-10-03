@@ -132,9 +132,18 @@ const EditBlogPostScreen = ({ navigation, route }) => {
     try {
       if (!imageUrl) return '';
       if (/^https?:\/\//i.test(imageUrl)) return imageUrl;
+      
+      console.log('[EditBlogPostScreen] Imagen no es URL pública. Subiendo a Storage...');
       const upload = await storageService.uploadImage(imageUrl, 'blog-images');
-      return upload?.success ? upload.url : '';
+      if (upload?.success && upload.url) {
+        console.log('[EditBlogPostScreen] Imagen subida. URL pública:', upload.url);
+        return upload.url;
+      } else {
+        console.warn('[EditBlogPostScreen] Falló subida a Storage, se publicará sin imagen');
+        return '';
+      }
     } catch (e) {
+      console.warn('[EditBlogPostScreen] Error subiendo imagen para redes:', e?.message || e);
       return '';
     }
   };
@@ -304,6 +313,69 @@ const EditBlogPostScreen = ({ navigation, route }) => {
 
   const handleBack = () => {
     navigation.navigate('BlogCRUD');
+  };
+
+  // Función unificada para republicar en redes sociales
+  const republishToSocialMedia = async (platform, content) => {
+    try {
+      setPublishing(prev => ({ ...prev, [platform]: true }));
+      
+      // Asegurar URL pública de imagen (igual que en publicación inicial)
+      let imageToUse = formData.image;
+      console.log(`[EditBlogPostScreen] Republicando en ${platform}...`);
+      
+      if (imageToUse && !/^https?:\/\//i.test(imageToUse)) {
+        try {
+          console.log(`[EditBlogPostScreen] Imagen no es URL pública. Subiendo a Storage...`);
+          const uploadResult = await storageService.uploadImage(imageToUse, 'blog-images');
+          if (uploadResult?.success && uploadResult.url) {
+            imageToUse = uploadResult.url;
+            console.log(`[EditBlogPostScreen] Imagen subida. URL pública:`, imageToUse);
+          } else {
+            console.warn(`[EditBlogPostScreen] Falló subida a Storage, se publicará sin imagen`);
+            imageToUse = null;
+          }
+        } catch (uploadErr) {
+          console.warn(`[EditBlogPostScreen] Error subiendo imagen para ${platform}:`, uploadErr?.message || uploadErr);
+          imageToUse = null;
+        }
+      }
+
+      // Publicar según la plataforma
+      let result;
+      if (platform === 'linkedin') {
+        result = await socialMediaService.publishToLinkedIn(content, imageToUse);
+      } else if (platform === 'instagram') {
+        result = await socialMediaService.publishToInstagram(content, imageToUse);
+      } else if (platform === 'twitter') {
+        result = await socialMediaService.publishToTwitter(content);
+      }
+
+      if (result?.success) {
+        setPublishedStatus(prev => ({ ...prev, [platform]: true }));
+        
+        // Actualizar el estado en Firebase también
+        const updateData = {
+          ...formData,
+          draft: isDraft,
+          updatedAt: new Date(),
+          socialMedia: { 
+            ...socialMediaData, 
+            published: { ...publishedStatus, [platform]: true } 
+          }
+        };
+        await blogPostsService.update(postId, updateData);
+        
+        Alert.alert('Éxito', `Re-publicado en ${platform === 'twitter' ? 'Twitter/X' : platform.charAt(0).toUpperCase() + platform.slice(1)}`);
+      } else {
+        Alert.alert('Error', result?.error || `No se pudo re-publicar en ${platform === 'twitter' ? 'Twitter/X' : platform.charAt(0).toUpperCase() + platform.slice(1)}`);
+      }
+    } catch (e) {
+      console.error(`Error republicando en ${platform}:`, e);
+      Alert.alert('Error', e?.message || `No se pudo re-publicar en ${platform === 'twitter' ? 'Twitter/X' : platform.charAt(0).toUpperCase() + platform.slice(1)}`);
+    } finally {
+      setPublishing(prev => ({ ...prev, [platform]: false }));
+    }
   };
 
   const handleCancel = () => {
@@ -661,49 +733,62 @@ const EditBlogPostScreen = ({ navigation, route }) => {
                       <Text style={styles.publishedChipText}>Publicado</Text>
                     </View>
                   )}
-                  <TouchableOpacity 
-                    style={[styles.postBtn, publishedStatus.linkedin && styles.postBtnDisabled]}
-                    onPress={async () => {
-                      const res = await socialMediaService.publishToLinkedIn(socialMediaData.linkedin, formData.image);
-                      if (res.success) {
-                        setPublishedStatus(prev => ({ ...prev, linkedin: true }));
-                        Alert.alert('Éxito', 'Publicado en LinkedIn');
-                      } else {
-                        Alert.alert('Error', res.error || 'No se pudo publicar en LinkedIn');
-                      }
-                    }}
-                    disabled={publishedStatus.linkedin}
-                  >
-                    <Ionicons name="send-outline" size={16} color="#FFFFFF" />
-                    <Text style={styles.postBtnText}>{publishedStatus.linkedin ? 'Publicado' : 'Publicar'}</Text>
-                  </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.postBtn}
-                  onPress={async () => {
-                    try {
-                      setPublishing(prev => ({ ...prev, linkedin: true }));
-                      const publicImageUrl = await ensurePublicImageUrl(formData.image);
-                      const res = await socialMediaService.publishToLinkedIn(socialMediaData.linkedin, publicImageUrl);
-                      if (res?.success) {
-                        setPublishedStatus(prev => ({ ...prev, linkedin: true }));
-                        Alert.alert('Éxito', 'Re-publicado en LinkedIn');
-                      } else {
-                        Alert.alert('Error', res?.error || 'No se pudo re-publicar en LinkedIn');
-                      }
-                    } catch (e) {
-                      Alert.alert('Error', e?.message || 'No se pudo re-publicar en LinkedIn');
-                    } finally {
-                      setPublishing(prev => ({ ...prev, linkedin: false }));
-                    }
-                  }}
-                >
-                  {publishing.linkedin ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  {!publishedStatus.linkedin ? (
+                    <TouchableOpacity 
+                      style={[styles.postBtn, (publishing.linkedin || !socialMediaData.linkedin?.trim()) && styles.postBtnDisabled]}
+                      onPress={async () => {
+                        try {
+                          setPublishing(prev => ({ ...prev, linkedin: true }));
+                          const res = await socialMediaService.publishToLinkedIn(socialMediaData.linkedin, formData.image);
+                          if (res.success) {
+                            setPublishedStatus(prev => ({ ...prev, linkedin: true }));
+                            
+                            // Actualizar el estado en Firebase también
+                            const updateData = {
+                              ...formData,
+                              draft: isDraft,
+                              updatedAt: new Date(),
+                              socialMedia: { 
+                                ...socialMediaData, 
+                                published: { ...publishedStatus, linkedin: true } 
+                              }
+                            };
+                            await blogPostsService.update(postId, updateData);
+                            
+                            Alert.alert('Éxito', 'Publicado en LinkedIn');
+                          } else {
+                            Alert.alert('Error', res.error || 'No se pudo publicar en LinkedIn');
+                          }
+                        } catch (err) {
+                          Alert.alert('Error', err?.message || 'No se pudo publicar en LinkedIn');
+                        } finally {
+                          setPublishing(prev => ({ ...prev, linkedin: false }));
+                        }
+                      }}
+                      disabled={publishing.linkedin || !socialMediaData.linkedin?.trim()}
+                    >
+                      {publishing.linkedin ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <Ionicons name="send-outline" size={16} color="#FFFFFF" />
+                      )}
+                      <Text style={styles.postBtnText}>
+                        {publishing.linkedin ? 'Publicando...' : 'Publicar'}
+                      </Text>
+                    </TouchableOpacity>
                   ) : (
-                    <Ionicons name="refresh" size={16} color="#FFFFFF" />
+                    <TouchableOpacity 
+                      style={styles.postBtn}
+                      onPress={() => republishToSocialMedia('linkedin', socialMediaData.linkedin)}
+                    >
+                      {publishing.linkedin ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <Ionicons name="refresh" size={16} color="#FFFFFF" />
+                      )}
+                      <Text style={styles.postBtnText}>{publishing.linkedin ? '...' : 'Re-publicar'}</Text>
+                    </TouchableOpacity>
                   )}
-                  <Text style={styles.postBtnText}>{publishing.linkedin ? '...' : 'Re-publicar'}</Text>
-                </TouchableOpacity>
                 </View>
               </View>
               <TextInput
@@ -729,49 +814,62 @@ const EditBlogPostScreen = ({ navigation, route }) => {
                       <Text style={styles.publishedChipText}>Publicado</Text>
                     </View>
                   )}
-                  <TouchableOpacity 
-                    style={[styles.postBtn, publishedStatus.instagram && styles.postBtnDisabled]}
-                    onPress={async () => {
-                      const res = await socialMediaService.publishToInstagram(socialMediaData.instagram, formData.image);
-                      if (res.success) {
-                        setPublishedStatus(prev => ({ ...prev, instagram: true }));
-                        Alert.alert('Éxito', 'Publicado en Instagram');
-                      } else {
-                        Alert.alert('Error', res.error || 'No se pudo publicar en Instagram');
-                      }
-                    }}
-                    disabled={publishedStatus.instagram}
-                  >
-                    <Ionicons name="send-outline" size={16} color="#FFFFFF" />
-                    <Text style={styles.postBtnText}>{publishedStatus.instagram ? 'Publicado' : 'Publicar'}</Text>
-                  </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.postBtn}
-                  onPress={async () => {
-                    try {
-                      setPublishing(prev => ({ ...prev, instagram: true }));
-                      const publicImageUrl = await ensurePublicImageUrl(formData.image);
-                      const res = await socialMediaService.publishToInstagram(socialMediaData.instagram, publicImageUrl);
-                      if (res?.success) {
-                        setPublishedStatus(prev => ({ ...prev, instagram: true }));
-                        Alert.alert('Éxito', 'Re-publicado en Instagram');
-                      } else {
-                        Alert.alert('Error', res?.error || 'No se pudo re-publicar en Instagram');
-                      }
-                    } catch (e) {
-                      Alert.alert('Error', e?.message || 'No se pudo re-publicar en Instagram');
-                    } finally {
-                      setPublishing(prev => ({ ...prev, instagram: false }));
-                    }
-                  }}
-                >
-                  {publishing.instagram ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  {!publishedStatus.instagram ? (
+                    <TouchableOpacity 
+                      style={[styles.postBtn, (publishing.instagram || !socialMediaData.instagram?.trim()) && styles.postBtnDisabled]}
+                      onPress={async () => {
+                        try {
+                          setPublishing(prev => ({ ...prev, instagram: true }));
+                          const res = await socialMediaService.publishToInstagram(socialMediaData.instagram, formData.image);
+                          if (res.success) {
+                            setPublishedStatus(prev => ({ ...prev, instagram: true }));
+                            
+                            // Actualizar el estado en Firebase también
+                            const updateData = {
+                              ...formData,
+                              draft: isDraft,
+                              updatedAt: new Date(),
+                              socialMedia: { 
+                                ...socialMediaData, 
+                                published: { ...publishedStatus, instagram: true } 
+                              }
+                            };
+                            await blogPostsService.update(postId, updateData);
+                            
+                            Alert.alert('Éxito', 'Publicado en Instagram');
+                          } else {
+                            Alert.alert('Error', res.error || 'No se pudo publicar en Instagram');
+                          }
+                        } catch (err) {
+                          Alert.alert('Error', err?.message || 'No se pudo publicar en Instagram');
+                        } finally {
+                          setPublishing(prev => ({ ...prev, instagram: false }));
+                        }
+                      }}
+                      disabled={publishing.instagram || !socialMediaData.instagram?.trim()}
+                    >
+                      {publishing.instagram ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <Ionicons name="send-outline" size={16} color="#FFFFFF" />
+                      )}
+                      <Text style={styles.postBtnText}>
+                        {publishing.instagram ? 'Publicando...' : 'Publicar'}
+                      </Text>
+                    </TouchableOpacity>
                   ) : (
-                    <Ionicons name="refresh" size={16} color="#FFFFFF" />
+                    <TouchableOpacity 
+                      style={styles.postBtn}
+                      onPress={() => republishToSocialMedia('instagram', socialMediaData.instagram)}
+                    >
+                      {publishing.instagram ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <Ionicons name="refresh" size={16} color="#FFFFFF" />
+                      )}
+                      <Text style={styles.postBtnText}>{publishing.instagram ? '...' : 'Re-publicar'}</Text>
+                    </TouchableOpacity>
                   )}
-                  <Text style={styles.postBtnText}>{publishing.instagram ? '...' : 'Re-publicar'}</Text>
-                </TouchableOpacity>
                 </View>
               </View>
               <TextInput
@@ -797,48 +895,62 @@ const EditBlogPostScreen = ({ navigation, route }) => {
                       <Text style={styles.publishedChipText}>Publicado</Text>
                     </View>
                   )}
-                  <TouchableOpacity 
-                    style={[styles.postBtn, publishedStatus.twitter && styles.postBtnDisabled]}
-                    onPress={async () => {
-                      const res = await socialMediaService.publishToTwitter(socialMediaData.twitter);
-                      if (res.success) {
-                        setPublishedStatus(prev => ({ ...prev, twitter: true }));
-                        Alert.alert('Éxito', 'Publicado en Twitter/X');
-                      } else {
-                        Alert.alert('Error', res.error || 'No se pudo publicar en Twitter/X');
-                      }
-                    }}
-                    disabled={publishedStatus.twitter}
-                  >
-                    <Ionicons name="send-outline" size={16} color="#FFFFFF" />
-                    <Text style={styles.postBtnText}>{publishedStatus.twitter ? 'Publicado' : 'Publicar'}</Text>
-                  </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.postBtn}
-                  onPress={async () => {
-                    try {
-                      setPublishing(prev => ({ ...prev, twitter: true }));
-                      const res = await socialMediaService.publishToTwitter(socialMediaData.twitter);
-                      if (res?.success) {
-                        setPublishedStatus(prev => ({ ...prev, twitter: true }));
-                        Alert.alert('Éxito', 'Re-publicado en Twitter/X');
-                      } else {
-                        Alert.alert('Error', res?.error || 'No se pudo re-publicar en Twitter/X');
-                      }
-                    } catch (e) {
-                      Alert.alert('Error', e?.message || 'No se pudo re-publicar en Twitter/X');
-                    } finally {
-                      setPublishing(prev => ({ ...prev, twitter: false }));
-                    }
-                  }}
-                >
-                  {publishing.twitter ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  {!publishedStatus.twitter ? (
+                    <TouchableOpacity 
+                      style={[styles.postBtn, (publishing.twitter || !socialMediaData.twitter?.trim()) && styles.postBtnDisabled]}
+                      onPress={async () => {
+                        try {
+                          setPublishing(prev => ({ ...prev, twitter: true }));
+                          const res = await socialMediaService.publishToTwitter(socialMediaData.twitter);
+                          if (res.success) {
+                            setPublishedStatus(prev => ({ ...prev, twitter: true }));
+                            
+                            // Actualizar el estado en Firebase también
+                            const updateData = {
+                              ...formData,
+                              draft: isDraft,
+                              updatedAt: new Date(),
+                              socialMedia: { 
+                                ...socialMediaData, 
+                                published: { ...publishedStatus, twitter: true } 
+                              }
+                            };
+                            await blogPostsService.update(postId, updateData);
+                            
+                            Alert.alert('Éxito', 'Publicado en Twitter/X');
+                          } else {
+                            Alert.alert('Error', res.error || 'No se pudo publicar en Twitter/X');
+                          }
+                        } catch (err) {
+                          Alert.alert('Error', err?.message || 'No se pudo publicar en Twitter/X');
+                        } finally {
+                          setPublishing(prev => ({ ...prev, twitter: false }));
+                        }
+                      }}
+                      disabled={publishing.twitter || !socialMediaData.twitter?.trim()}
+                    >
+                      {publishing.twitter ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <Ionicons name="send-outline" size={16} color="#FFFFFF" />
+                      )}
+                      <Text style={styles.postBtnText}>
+                        {publishing.twitter ? 'Publicando...' : 'Publicar'}
+                      </Text>
+                    </TouchableOpacity>
                   ) : (
-                    <Ionicons name="refresh" size={16} color="#FFFFFF" />
+                    <TouchableOpacity 
+                      style={styles.postBtn}
+                      onPress={() => republishToSocialMedia('twitter', socialMediaData.twitter)}
+                    >
+                      {publishing.twitter ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <Ionicons name="refresh" size={16} color="#FFFFFF" />
+                      )}
+                      <Text style={styles.postBtnText}>{publishing.twitter ? '...' : 'Re-publicar'}</Text>
+                    </TouchableOpacity>
                   )}
-                  <Text style={styles.postBtnText}>{publishing.twitter ? '...' : 'Re-publicar'}</Text>
-                </TouchableOpacity>
                 </View>
               </View>
               <TextInput

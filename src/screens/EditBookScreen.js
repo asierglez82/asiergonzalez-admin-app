@@ -155,6 +155,69 @@ Devuelve un JSON con esta estructura:
 
   const handleInputChange = (field, value) => setFormData(prev => ({ ...prev, [field]: value }));
 
+  // Función unificada para republicar en redes sociales
+  const republishToSocialMedia = async (platform, content) => {
+    try {
+      setPublishing(prev => ({ ...prev, [platform]: true }));
+      
+      // Asegurar URL pública de imagen (igual que en publicación inicial)
+      let imageToUse = formData.image;
+      console.log(`[EditBookScreen] Republicando en ${platform}...`);
+      
+      if (imageToUse && !/^https?:\/\//i.test(imageToUse)) {
+        try {
+          console.log(`[EditBookScreen] Imagen no es URL pública. Subiendo a Storage...`);
+          const uploadResult = await storageService.uploadImage(imageToUse, 'book-images');
+          if (uploadResult?.success && uploadResult.url) {
+            imageToUse = uploadResult.url;
+            console.log(`[EditBookScreen] Imagen subida. URL pública:`, imageToUse);
+          } else {
+            console.warn(`[EditBookScreen] Falló subida a Storage, se publicará sin imagen`);
+            imageToUse = null;
+          }
+        } catch (uploadErr) {
+          console.warn(`[EditBookScreen] Error subiendo imagen para ${platform}:`, uploadErr?.message || uploadErr);
+          imageToUse = null;
+        }
+      }
+
+      // Publicar según la plataforma
+      let result;
+      if (platform === 'linkedin') {
+        result = await socialMediaService.publishToLinkedIn(content, imageToUse);
+      } else if (platform === 'instagram') {
+        result = await socialMediaService.publishToInstagram(content, imageToUse);
+      } else if (platform === 'twitter') {
+        result = await socialMediaService.publishToTwitter(content);
+      }
+
+      if (result?.success) {
+        setPublishedStatus(prev => ({ ...prev, [platform]: true }));
+        
+        // Actualizar el estado en Firebase también
+        const updateData = {
+          ...formData,
+          draft: isDraft,
+          updatedAt: new Date(),
+          socialMedia: { 
+            ...socialMediaData, 
+            published: { ...publishedStatus, [platform]: true } 
+          }
+        };
+        await booksService.update(bookId, updateData);
+        
+        Alert.alert('Éxito', `Re-publicado en ${platform === 'twitter' ? 'Twitter/X' : platform.charAt(0).toUpperCase() + platform.slice(1)}`);
+      } else {
+        Alert.alert('Error', result?.error || `No se pudo re-publicar en ${platform === 'twitter' ? 'Twitter/X' : platform.charAt(0).toUpperCase() + platform.slice(1)}`);
+      }
+    } catch (e) {
+      console.error(`Error republicando en ${platform}:`, e);
+      Alert.alert('Error', e?.message || `No se pudo re-publicar en ${platform === 'twitter' ? 'Twitter/X' : platform.charAt(0).toUpperCase() + platform.slice(1)}`);
+    } finally {
+      setPublishing(prev => ({ ...prev, [platform]: false }));
+    }
+  };
+
   const handleBack = () => navigation.navigate('BooksCRUD');
 
   // Asegurar URL pública de imagen: si no es http(s), subir a Storage (books-images)
@@ -412,51 +475,78 @@ Devuelve un JSON con esta estructura:
                       <Text style={styles.publishedChipText}>Publicado</Text>
                     </View>
                   )}
-                  <TouchableOpacity
-                    style={[
-                      styles.postBtn,
-                      (publishedStatus.linkedin || publishing.linkedin || !socialMediaData.linkedin?.trim()) && styles.postBtnDisabled
-                    ]}
-                    onPress={async () => {
-                      try {
-                        setPublishing(prev => ({ ...prev, linkedin: true }));
-                        const publicImageUrl = await ensurePublicImageUrl(formData.image);
-                        const res = await socialMediaService.publishToLinkedIn(socialMediaData.linkedin, publicImageUrl);
-                        if (res?.success === true) {
-                          setPublishedStatus(prev => ({ ...prev, linkedin: true }));
-                          Alert.alert('Éxito', 'Publicado en LinkedIn');
-                        } else {
-                          const errorMsg = res?.error || '';
-                          const isDuplicate = errorMsg.includes('DUPLICATE_POST') || errorMsg.includes('Duplicate post');
+                  {!publishedStatus.linkedin ? (
+                    <TouchableOpacity
+                      style={[styles.postBtn, (publishing.linkedin || !socialMediaData.linkedin?.trim()) && styles.postBtnDisabled]}
+                      onPress={async () => {
+                        try {
+                          setPublishing(prev => ({ ...prev, linkedin: true }));
+                          const publicImageUrl = await ensurePublicImageUrl(formData.image);
+                          const res = await socialMediaService.publishToLinkedIn(socialMediaData.linkedin, publicImageUrl);
+                          if (res?.success === true) {
+                            setPublishedStatus(prev => ({ ...prev, linkedin: true }));
+                            
+                            // Actualizar el estado en Firebase también
+                            const updateData = {
+                              ...formData,
+                              draft: isDraft,
+                              updatedAt: new Date(),
+                              socialMedia: { 
+                                ...socialMediaData, 
+                                published: { ...publishedStatus, linkedin: true } 
+                              }
+                            };
+                            await booksService.update(bookId, updateData);
+                            
+                            Alert.alert('Éxito', 'Publicado en LinkedIn');
+                          } else {
+                            const errorMsg = res?.error || '';
+                            const isDuplicate = errorMsg.includes('DUPLICATE_POST') || errorMsg.includes('Duplicate post');
+                            if (isDuplicate) {
+                              Alert.alert('Contenido duplicado', 'LinkedIn no permite publicar el mismo contenido dos veces. Por favor, modifica el texto antes de publicar.');
+                            } else {
+                              const details = typeof res === 'object' ? JSON.stringify(res) : (res || '');
+                              Alert.alert('Error', `No se pudo publicar en LinkedIn. ${res?.error || details}`);
+                            }
+                          }
+                        } catch (err) {
+                          const isDuplicate = err?.message?.includes('DUPLICATE_POST') || err?.message?.includes('Duplicate post');
                           if (isDuplicate) {
                             Alert.alert('Contenido duplicado', 'LinkedIn no permite publicar el mismo contenido dos veces. Por favor, modifica el texto antes de publicar.');
                           } else {
-                            const details = typeof res === 'object' ? JSON.stringify(res) : (res || '');
-                            Alert.alert('Error', `No se pudo publicar en LinkedIn. ${res?.error || details}`);
+                            Alert.alert('Error', `Fallo publicando en LinkedIn: ${err?.message || err}`);
                           }
+                        } finally {
+                          setPublishing(prev => ({ ...prev, linkedin: false }));
                         }
-                      } catch (err) {
-                        const isDuplicate = err?.message?.includes('DUPLICATE_POST') || err?.message?.includes('Duplicate post');
-                        if (isDuplicate) {
-                          Alert.alert('Contenido duplicado', 'LinkedIn no permite publicar el mismo contenido dos veces. Por favor, modifica el texto antes de publicar.');
-                        } else {
-                          Alert.alert('Error', `Fallo publicando en LinkedIn: ${err?.message || err}`);
-                        }
-                      } finally {
-                        setPublishing(prev => ({ ...prev, linkedin: false }));
-                      }
-                    }}
-                    disabled={publishedStatus.linkedin || publishing.linkedin || !socialMediaData.linkedin?.trim()}
-                  >
-                    {publishing.linkedin ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
-                    ) : (
-                      <Ionicons name="send-outline" size={16} color="#FFFFFF" />
-                    )}
-                    <Text style={styles.postBtnText}>
-                      {publishedStatus.linkedin ? 'Publicado' : publishing.linkedin ? 'Publicando...' : 'Publicar'}
-                    </Text>
-                  </TouchableOpacity>
+                      }}
+                      disabled={publishing.linkedin || !socialMediaData.linkedin?.trim()}
+                    >
+                      {publishing.linkedin ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <Ionicons name="send-outline" size={16} color="#FFFFFF" />
+                      )}
+                      <Text style={styles.postBtnText}>
+                        {publishing.linkedin ? 'Publicando...' : 'Publicar'}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={[styles.postBtn, publishing.linkedin && styles.postBtnDisabled]}
+                      onPress={() => republishToSocialMedia('linkedin', socialMediaData.linkedin)}
+                      disabled={publishing.linkedin}
+                    >
+                      {publishing.linkedin ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <Ionicons name="refresh" size={16} color="#FFFFFF" />
+                      )}
+                      <Text style={styles.postBtnText}>
+                        {publishing.linkedin ? '...' : 'Re-publicar'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
               <TextInput
@@ -482,35 +572,63 @@ Devuelve un JSON con esta estructura:
                       <Text style={styles.publishedChipText}>Publicado</Text>
                     </View>
                   )}
-                  <TouchableOpacity
-                    style={[styles.postBtn, (publishedStatus.instagram || publishing.instagram || !socialMediaData.instagram?.trim()) && styles.postBtnDisabled]}
-                    onPress={async () => {
-                      try {
-                        setPublishing(prev => ({ ...prev, instagram: true }));
-                        const publicImageUrl = await ensurePublicImageUrl(formData.image);
-                        const res = await socialMediaService.publishToInstagram(socialMediaData.instagram, publicImageUrl);
-                        if (res?.success === true) {
-                          setPublishedStatus(prev => ({ ...prev, instagram: true }));
-                          Alert.alert('Éxito', 'Publicado en Instagram');
-                        } else {
-                          const details = typeof res === 'object' ? JSON.stringify(res) : (res || '');
-                          Alert.alert('Error', `No se pudo publicar en Instagram. ${res?.error || details}`);
+                  {!publishedStatus.instagram ? (
+                    <TouchableOpacity
+                      style={[styles.postBtn, (publishing.instagram || !socialMediaData.instagram?.trim()) && styles.postBtnDisabled]}
+                      onPress={async () => {
+                        try {
+                          setPublishing(prev => ({ ...prev, instagram: true }));
+                          const publicImageUrl = await ensurePublicImageUrl(formData.image);
+                          const res = await socialMediaService.publishToInstagram(socialMediaData.instagram, publicImageUrl);
+                          if (res?.success === true) {
+                            setPublishedStatus(prev => ({ ...prev, instagram: true }));
+                            
+                            // Actualizar el estado en Firebase también
+                            const updateData = {
+                              ...formData,
+                              draft: isDraft,
+                              updatedAt: new Date(),
+                              socialMedia: { 
+                                ...socialMediaData, 
+                                published: { ...publishedStatus, instagram: true } 
+                              }
+                            };
+                            await booksService.update(bookId, updateData);
+                            
+                            Alert.alert('Éxito', 'Publicado en Instagram');
+                          } else {
+                            const details = typeof res === 'object' ? JSON.stringify(res) : (res || '');
+                            Alert.alert('Error', `No se pudo publicar en Instagram. ${res?.error || details}`);
+                          }
+                        } catch (err) {
+                          Alert.alert('Error', `Fallo publicando en Instagram: ${err?.message || err}`);
+                        } finally {
+                          setPublishing(prev => ({ ...prev, instagram: false }));
                         }
-                      } catch (err) {
-                        Alert.alert('Error', `Fallo publicando en Instagram: ${err?.message || err}`);
-                      } finally {
-                        setPublishing(prev => ({ ...prev, instagram: false }));
-                      }
-                    }}
-                    disabled={publishedStatus.instagram || publishing.instagram || !socialMediaData.instagram?.trim()}
-                  >
-                    {publishing.instagram ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
-                    ) : (
-                      <Ionicons name="send-outline" size={16} color="#FFFFFF" />
-                    )}
-                    <Text style={styles.postBtnText}>{publishedStatus.instagram ? 'Publicado' : publishing.instagram ? 'Publicando...' : 'Publicar'}</Text>
-                  </TouchableOpacity>
+                      }}
+                      disabled={publishing.instagram || !socialMediaData.instagram?.trim()}
+                    >
+                      {publishing.instagram ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <Ionicons name="send-outline" size={16} color="#FFFFFF" />
+                      )}
+                      <Text style={styles.postBtnText}>{publishing.instagram ? 'Publicando...' : 'Publicar'}</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={[styles.postBtn, publishing.instagram && styles.postBtnDisabled]}
+                      onPress={() => republishToSocialMedia('instagram', socialMediaData.instagram)}
+                      disabled={publishing.instagram}
+                    >
+                      {publishing.instagram ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <Ionicons name="refresh" size={16} color="#FFFFFF" />
+                      )}
+                      <Text style={styles.postBtnText}>{publishing.instagram ? '...' : 'Re-publicar'}</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
               <TextInput
@@ -536,34 +654,62 @@ Devuelve un JSON con esta estructura:
                       <Text style={styles.publishedChipText}>Publicado</Text>
                     </View>
                   )}
-                  <TouchableOpacity
-                    style={[styles.postBtn, (publishedStatus.twitter || publishing.twitter || !socialMediaData.twitter?.trim()) && styles.postBtnDisabled]}
-                    onPress={async () => {
-                      try {
-                        setPublishing(prev => ({ ...prev, twitter: true }));
-                        const res = await socialMediaService.publishToTwitter(socialMediaData.twitter);
-                        if (res?.success === true) {
-                          setPublishedStatus(prev => ({ ...prev, twitter: true }));
-                          Alert.alert('Éxito', 'Publicado en Twitter/X');
-                        } else {
-                          const details = typeof res === 'object' ? JSON.stringify(res) : (res || '');
-                          Alert.alert('Error', `No se pudo publicar en Twitter/X. ${res?.error || details}`);
+                  {!publishedStatus.twitter ? (
+                    <TouchableOpacity
+                      style={[styles.postBtn, (publishing.twitter || !socialMediaData.twitter?.trim()) && styles.postBtnDisabled]}
+                      onPress={async () => {
+                        try {
+                          setPublishing(prev => ({ ...prev, twitter: true }));
+                          const res = await socialMediaService.publishToTwitter(socialMediaData.twitter);
+                          if (res?.success === true) {
+                            setPublishedStatus(prev => ({ ...prev, twitter: true }));
+                            
+                            // Actualizar el estado en Firebase también
+                            const updateData = {
+                              ...formData,
+                              draft: isDraft,
+                              updatedAt: new Date(),
+                              socialMedia: { 
+                                ...socialMediaData, 
+                                published: { ...publishedStatus, twitter: true } 
+                              }
+                            };
+                            await booksService.update(bookId, updateData);
+                            
+                            Alert.alert('Éxito', 'Publicado en Twitter/X');
+                          } else {
+                            const details = typeof res === 'object' ? JSON.stringify(res) : (res || '');
+                            Alert.alert('Error', `No se pudo publicar en Twitter/X. ${res?.error || details}`);
+                          }
+                        } catch (err) {
+                          Alert.alert('Error', `Fallo publicando en Twitter/X: ${err?.message || err}`);
+                        } finally {
+                          setPublishing(prev => ({ ...prev, twitter: false }));
                         }
-                      } catch (err) {
-                        Alert.alert('Error', `Fallo publicando en Twitter/X: ${err?.message || err}`);
-                      } finally {
-                        setPublishing(prev => ({ ...prev, twitter: false }));
-                      }
-                    }}
-                    disabled={publishedStatus.twitter || publishing.twitter || !socialMediaData.twitter?.trim()}
-                  >
-                    {publishing.twitter ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
-                    ) : (
-                      <Ionicons name="send-outline" size={16} color="#FFFFFF" />
-                    )}
-                    <Text style={styles.postBtnText}>{publishedStatus.twitter ? 'Publicado' : publishing.twitter ? 'Publicando...' : 'Publicar'}</Text>
-                  </TouchableOpacity>
+                      }}
+                      disabled={publishing.twitter || !socialMediaData.twitter?.trim()}
+                    >
+                      {publishing.twitter ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <Ionicons name="send-outline" size={16} color="#FFFFFF" />
+                      )}
+                      <Text style={styles.postBtnText}>{publishing.twitter ? 'Publicando...' : 'Publicar'}</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={[styles.postBtn, publishing.twitter && styles.postBtnDisabled]}
+                      onPress={() => republishToSocialMedia('twitter', socialMediaData.twitter)}
+                      disabled={publishing.twitter}
+                    >
+                      {publishing.twitter ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <Ionicons name="refresh" size={16} color="#FFFFFF" />
+                      )}
+                      <Text style={styles.postBtnText}>{publishing.twitter ? '...' : 'Re-publicar'}</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
               <TextInput
