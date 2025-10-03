@@ -14,24 +14,23 @@ import {
   Switch
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { blogPostsService } from '../services/firestore';
+import { projectsService } from '../services/firestore';
 import socialMediaService from '../config/socialMediaConfig';
 import { storageService } from '../services/storage';
 import geminiService from '../config/geminiConfig';
 
 const { width, height } = Dimensions.get('window');
 
-const EditBlogPostScreen = ({ navigation, route }) => {
-  const { postId } = route.params;
-  console.log('EditBlogPostScreen - Received postId:', postId);
+const EditProjectScreen = ({ navigation, route }) => {
+  const { projectId } = route.params;
+  console.log('EditProjectScreen - Received projectId:', projectId);
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [screenData, setScreenData] = useState(Dimensions.get('window'));
-  const [post, setPost] = useState(null);
+  const [project, setProject] = useState(null);
   const [isDraft, setIsDraft] = useState(true);
   
-   
   // Estados para redes sociales
   const [connectedPlatforms, setConnectedPlatforms] = useState({
     instagram: false,
@@ -56,45 +55,81 @@ const EditBlogPostScreen = ({ navigation, route }) => {
   const [publishing, setPublishing] = useState({ linkedin: false, instagram: false, twitter: false });
   const [generatingContent, setGeneratingContent] = useState(false);
   
-  // Form fields - actualizados para coincidir con Firebase
+  // Form fields - campos de la colección project
   const [formData, setFormData] = useState({
     title: '',
-    author: '',
-    date: '',
-    modalContent: '',
-    tags: '',
+    subtitle: '',
+    category: '',
+    description: '',
+    content: '',
     image: '',
-    event: '',
-    modal: 'mymodal',
-    width: '1200px',
+    detailImage: '',
+    tags: '',
+    company: '',
+    website: '',
+    date: '',
     path: '',
     url: '',
-    slug: ''
+    event: '',
+    brochure: '',
+    video: '',
+    videolink1: '',
+    press1: '',
+    press2: '',
+    press3: '',
+    press4: '',
+    presslink1: '',
+    presslink2: '',
+    presslink3: '',
+    presslink4: '',
+    image1: '',
+    image2: '',
+    image3: '',
+    image4: '',
+    video1: ''
   });
 
   // Función para cargar datos
-  const loadBlogPost = async () => {
+  const loadProject = async () => {
     try {
-      console.log('loadBlogPost called with postId:', postId);
+      console.log('loadProject called with projectId:', projectId);
       setLoading(true);
       
-      const data = await blogPostsService.getById(postId);
+      const data = await projectsService.getById(projectId);
       console.log('Data loaded:', data);
       
-      setPost(data);
+      setProject(data);
       setFormData({
         title: data.title || '',
-        author: data.author || '',
-        date: data.date || '',
-        modalContent: data.modalContent || '',
-        tags: data.tags || '',
+        subtitle: data.subtitle || '',
+        category: data.category || '',
+        description: data.description || '',
+        content: data.content || '',
         image: data.image || '',
-        event: data.event || '',
-        modal: data.modal || 'mymodal',
-        width: data.width || '1200px',
+        detailImage: data.detailImage || '',
+        tags: data.tags || '',
+        company: data.company || '',
+        website: data.website || '',
+        date: data.date || '',
         path: data.path || '',
         url: data.url || '',
-        slug: data.slug || ''
+        event: data.event || '',
+        brochure: data.brochure || '',
+        video: data.video || '',
+        videolink1: data.videolink1 || '',
+        press1: data.press1 || '',
+        press2: data.press2 || '',
+        press3: data.press3 || '',
+        press4: data.press4 || '',
+        presslink1: data.presslink1 || '',
+        presslink2: data.presslink2 || '',
+        presslink3: data.presslink3 || '',
+        presslink4: data.presslink4 || '',
+        image1: data.image1 || '',
+        image2: data.image2 || '',
+        image3: data.image3 || '',
+        image4: data.image4 || '',
+        video1: data.video1 || ''
       });
       
       // Inicializar estado de borrador
@@ -121,47 +156,26 @@ const EditBlogPostScreen = ({ navigation, route }) => {
       
       console.log('Form data set:', formData);
     } catch (error) {
-      console.error('Error loading blog post:', error);
-      Alert.alert('Error', `Error al cargar el post: ${error.message}`);
+      console.error('Error loading project:', error);
+      Alert.alert('Error', `Error al cargar el proyecto: ${error.message}`);
       navigation.goBack();
     } finally {
       setLoading(false);
     }
   };
 
-  // Asegurar URL pública de imagen (subir a Storage si no es http/https)
-  const ensurePublicImageUrl = async (imageUrl) => {
-    try {
-      if (!imageUrl) return '';
-      if (/^https?:\/\//i.test(imageUrl)) return imageUrl;
-      
-      console.log('[EditBlogPostScreen] Imagen no es URL pública. Subiendo a Storage...');
-      const upload = await storageService.uploadImage(imageUrl, 'blog-images');
-      if (upload?.success && upload.url) {
-        console.log('[EditBlogPostScreen] Imagen subida. URL pública:', upload.url);
-        return upload.url;
-      } else {
-        console.warn('[EditBlogPostScreen] Falló subida a Storage, se publicará sin imagen');
-        return '';
-      }
-    } catch (e) {
-      console.warn('[EditBlogPostScreen] Error subiendo imagen para redes:', e?.message || e);
-      return '';
-    }
-  };
-
   // useEffect para cargar datos
   useEffect(() => {
-    console.log('useEffect triggered with postId:', postId);
-    if (postId) {
-      console.log('Calling loadBlogPost from useEffect...');
-      loadBlogPost();
+    console.log('useEffect triggered with projectId:', projectId);
+    if (projectId) {
+      console.log('Calling loadProject from useEffect...');
+      loadProject();
     } else {
-      console.error('No postId provided');
-      Alert.alert('Error', 'No se proporcionó ID del post');
+      console.error('No projectId provided');
+      Alert.alert('Error', 'No se proporcionó ID del proyecto');
       navigation.goBack();
     }
-  }, [postId]);
+  }, [projectId]);
   
   // Cargar plataformas conectadas al montar el componente
   useEffect(() => {
@@ -181,24 +195,24 @@ const EditBlogPostScreen = ({ navigation, route }) => {
     try {
       setGeneratingContent(true);
       
-      const prompt = `Genera contenido para redes sociales basado en este post del blog:
+      const prompt = `Genera contenido para redes sociales basado en este proyecto:
 
 Título: ${formData.title || '[Sin título]'}
-Autor: ${formData.author || '[Sin autor]'}
-Fecha: ${formData.date || '[Sin fecha]'}
-Evento: ${formData.event || '[Sin evento]'}
-Tags: ${formData.tags || '[Sin tags]'}
-Contenido: ${formData.modalContent ? formData.modalContent.replace(/<[^>]+>/g, '').substring(0, 500) + '...' : '[Sin contenido]'}
+Subtítulo: ${formData.subtitle || '[Sin subtítulo]'}
+Categoría: ${formData.category || '[Sin categoría]'}
+Empresa: ${formData.company || '[Sin empresa]'}
+Descripción: ${formData.description || '[Sin descripción]'}
+Contenido: ${formData.content ? formData.content.replace(/<[^>]+>/g, '').substring(0, 500) + '...' : '[Sin contenido]'}
 
 IMPORTANTE: 
-- Los campos título, autor y fecha son fijos y NO deben ser generados ni modificados.
+- Los campos título, subtítulo, categoría y empresa son fijos y NO deben ser generados ni modificados.
 - NO uses emojis en ninguna de las respuestas.
 
 Genera contenido específico para cada plataforma:
 
-LinkedIn: Contenido profesional y detallado sobre el post del blog (máximo 3000 caracteres)
-Instagram: Contenido visual y atractivo sobre el post del blog (máximo 2200 caracteres)  
-Twitter: Contenido conciso y directo sobre el post del blog (máximo 280 caracteres)
+LinkedIn: Contenido profesional y detallado sobre el proyecto (máximo 3000 caracteres)
+Instagram: Contenido visual y atractivo sobre el proyecto (máximo 2200 caracteres)  
+Twitter: Contenido conciso y directo sobre el proyecto (máximo 280 caracteres)
 
 Devuelve un JSON con esta estructura:
 {
@@ -237,11 +251,6 @@ Devuelve un JSON con esta estructura:
     return () => subscription?.remove();
   }, []);
 
-  // Monitorear cambios en formData
-  useEffect(() => {
-    console.log('FormData changed:', formData);
-  }, [formData]);
-
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
       ...prev,
@@ -266,107 +275,82 @@ Devuelve un JSON con esta estructura:
         socialMedia: { ...socialMediaData, published: publishedStatus }
       };
 
-      await blogPostsService.update(postId, updateData);
+      await projectsService.update(projectId, updateData);
       
       Alert.alert(
         'Éxito', 
-        'Post actualizado correctamente',
-        [{ text: 'OK', onPress: () => navigation.navigate('BlogCRUD') }]
+        'Proyecto actualizado correctamente',
+        [{ text: 'OK', onPress: () => navigation.navigate('ProjectsCRUD') }]
       );
     } catch (error) {
-      Alert.alert('Error', 'Error al actualizar el post');
-      console.error('Error updating blog post:', error);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // Función para publicar (actualizar a publicado Y publicar en redes sociales)
-  const handlePublish = async () => {
-    try {
-      setSaving(true);
-      
-      if (!formData.title.trim()) {
-        Alert.alert('Error', 'El título es requerido');
-        return;
-      }
-      
-      // 1. Actualizar el post como publicado
-      const updateData = {
-        ...formData,
-        draft: false, // Marcar como publicado
-        updatedAt: new Date(),
-        socialMedia: { ...socialMediaData, published: publishedStatus }
-      };
-
-      await blogPostsService.update(postId, updateData);
-      
-      // 2. Publicar en redes sociales si hay contenido
-      const platformsContent = {};
-      
-      if (connectedPlatforms.linkedin && socialMediaData.linkedin && socialMediaData.settings.genLinkedin) {
-        platformsContent.linkedin = socialMediaData.linkedin;
-      }
-      
-      if (connectedPlatforms.instagram && socialMediaData.instagram && socialMediaData.settings.genInstagram) {
-        platformsContent.instagram = socialMediaData.instagram;
-      }
-      
-      if (connectedPlatforms.twitter && socialMediaData.twitter && socialMediaData.settings.genTwitter) {
-        platformsContent.twitter = socialMediaData.twitter;
-      }
-      
-      let socialMediaResults = null;
-      
-      // Si hay contenido para publicar en redes sociales, publicar
-      if (Object.keys(platformsContent).length > 0) {
-        try {
-          console.log('Publicando en redes sociales desde edición...');
-          
-          const result = await socialMediaService.publishToMultiplePlatforms(
-            platformsContent, 
-            formData.image
-          );
-          
-          socialMediaResults = result;
-          console.log('Resultado publicación redes sociales:', result);
-        } catch (socialError) {
-          console.warn('Error publicando en redes sociales:', socialError);
-        }
-      }
-      
-      // Mostrar mensaje de éxito
-      const webMessage = 'Post publicado en la web correctamente.';
-      let socialMessage = '';
-      
-      if (socialMediaResults && socialMediaResults.success) {
-        const { successful, total, failed } = socialMediaResults.summary;
-        socialMessage = ` También publicado en ${successful} de ${total} redes sociales.`;
-        if (failed > 0) {
-          socialMessage += ` ${failed} fallaron.`;
-        }
-      } else if (Object.keys(platformsContent).length > 0) {
-        socialMessage = ' Error al publicar en redes sociales.';
-      } else {
-        socialMessage = ' Sin contenido para redes sociales.';
-      }
-      
-      Alert.alert(
-        'Publicación completada', 
-        webMessage + socialMessage,
-        [{ text: 'OK', onPress: () => navigation.navigate('BlogCRUD') }]
-      );
-      
-    } catch (error) {
-      Alert.alert('Error', 'Error al publicar el post');
-      console.error('Error publishing blog post:', error);
+      Alert.alert('Error', 'Error al actualizar el proyecto');
+      console.error('Error updating project:', error);
     } finally {
       setSaving(false);
     }
   };
 
   const handleBack = () => {
-    navigation.navigate('BlogCRUD');
+    navigation.navigate('ProjectsCRUD');
+  };
+
+  const handleCancel = () => {
+    // Deshacer cambios - restaurar datos originales
+    if (project) {
+      setFormData({
+        title: project.title || '',
+        subtitle: project.subtitle || '',
+        category: project.category || '',
+        description: project.description || '',
+        content: project.content || '',
+        image: project.image || '',
+        detailImage: project.detailImage || '',
+        tags: project.tags || '',
+        company: project.company || '',
+        website: project.website || '',
+        date: project.date || '',
+        path: project.path || '',
+        url: project.url || '',
+        event: project.event || '',
+        brochure: project.brochure || '',
+        video: project.video || '',
+        videolink1: project.videolink1 || '',
+        press1: project.press1 || '',
+        press2: project.press2 || '',
+        press3: project.press3 || '',
+        press4: project.press4 || '',
+        presslink1: project.presslink1 || '',
+        presslink2: project.presslink2 || '',
+        presslink3: project.presslink3 || '',
+        presslink4: project.presslink4 || '',
+        image1: project.image1 || '',
+        image2: project.image2 || '',
+        image3: project.image3 || '',
+        image4: project.image4 || '',
+        video1: project.video1 || ''
+      });
+      setIsDraft(project.draft !== false);
+      
+      // Restaurar datos de redes sociales
+      if (project.socialMedia) {
+        setSocialMediaData({
+          linkedin: project.socialMedia.linkedin || '',
+          instagram: project.socialMedia.instagram || '',
+          twitter: project.socialMedia.twitter || '',
+          settings: {
+            genLinkedin: project.socialMedia.settings?.genLinkedin !== false,
+            genInstagram: project.socialMedia.settings?.genInstagram !== false,
+            genTwitter: project.socialMedia.settings?.genTwitter || false
+          }
+        });
+        setPublishedStatus({
+          linkedin: !!project.socialMedia?.published?.linkedin,
+          instagram: !!project.socialMedia?.published?.instagram,
+          twitter: !!project.socialMedia?.published?.twitter,
+        });
+      }
+    }
+    Alert.alert('Cambios deshechos', 'Se han restaurado los valores originales del proyecto');
   };
 
   // Función unificada para republicar en redes sociales
@@ -376,21 +360,21 @@ Devuelve un JSON con esta estructura:
       
       // Asegurar URL pública de imagen (igual que en publicación inicial)
       let imageToUse = formData.image;
-      console.log(`[EditBlogPostScreen] Republicando en ${platform}...`);
+      console.log(`[EditProjectScreen] Republicando en ${platform}...`);
       
       if (imageToUse && !/^https?:\/\//i.test(imageToUse)) {
         try {
-          console.log(`[EditBlogPostScreen] Imagen no es URL pública. Subiendo a Storage...`);
-          const uploadResult = await storageService.uploadImage(imageToUse, 'blog-images');
+          console.log(`[EditProjectScreen] Imagen no es URL pública. Subiendo a Storage...`);
+          const uploadResult = await storageService.uploadImage(imageToUse, 'project-images');
           if (uploadResult?.success && uploadResult.url) {
             imageToUse = uploadResult.url;
-            console.log(`[EditBlogPostScreen] Imagen subida. URL pública:`, imageToUse);
+            console.log(`[EditProjectScreen] Imagen subida. URL pública:`, imageToUse);
           } else {
-            console.warn(`[EditBlogPostScreen] Falló subida a Storage, se publicará sin imagen`);
+            console.warn(`[EditProjectScreen] Falló subida a Storage, se publicará sin imagen`);
             imageToUse = null;
           }
         } catch (uploadErr) {
-          console.warn(`[EditBlogPostScreen] Error subiendo imagen para ${platform}:`, uploadErr?.message || uploadErr);
+          console.warn(`[EditProjectScreen] Error subiendo imagen para ${platform}:`, uploadErr?.message || uploadErr);
           imageToUse = null;
         }
       }
@@ -418,7 +402,7 @@ Devuelve un JSON con esta estructura:
             published: { ...publishedStatus, [platform]: true } 
           }
         };
-        await blogPostsService.update(postId, updateData);
+        await projectsService.update(projectId, updateData);
         
         Alert.alert('Éxito', `Re-publicado en ${platform === 'twitter' ? 'Twitter/X' : platform.charAt(0).toUpperCase() + platform.slice(1)}`);
       } else {
@@ -432,57 +416,12 @@ Devuelve un JSON con esta estructura:
     }
   };
 
-  const handleCancel = () => {
-    // Deshacer cambios - restaurar datos originales
-    if (post) {
-      setFormData({
-        title: post.title || '',
-        author: post.author || '',
-        date: post.date || '',
-        modalContent: post.modalContent || '',
-        tags: post.tags || '',
-        image: post.image || '',
-        event: post.event || '',
-        modal: post.modal || 'mymodal',
-        width: post.width || '1200px',
-        path: post.path || '',
-        url: post.url || '',
-        slug: post.slug || ''
-      });
-      setIsDraft(post.draft !== false);
-      
-      // Restaurar datos de redes sociales
-      if (post.socialMedia) {
-        setSocialMediaData({
-          linkedin: post.socialMedia.linkedin || '',
-          instagram: post.socialMedia.instagram || '',
-          twitter: post.socialMedia.twitter || '',
-          settings: {
-            genLinkedin: post.socialMedia.settings?.genLinkedin !== false,
-            genInstagram: post.socialMedia.settings?.genInstagram !== false,
-            genTwitter: post.socialMedia.settings?.genTwitter || false
-          }
-        });
-        setPublishedStatus({
-          linkedin: !!post.socialMedia?.published?.linkedin,
-          instagram: !!post.socialMedia?.published?.instagram,
-          twitter: !!post.socialMedia?.published?.twitter,
-        });
-      }
-    }
-    Alert.alert('Cambios deshechos', 'Se han restaurado los valores originales del post');
-  };
-
-  console.log('Rendering with formData:', formData);
-  console.log('Rendering with post:', post);
-  console.log('Rendering with loading:', loading);
-
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#00ca77" />
-        <Text style={styles.loadingText}>Cargando post del blog...</Text>
-        <Text style={styles.loadingText}>ID: {postId}</Text>
+        <Text style={styles.loadingText}>Cargando proyecto...</Text>
+        <Text style={styles.loadingText}>ID: {projectId}</Text>
       </View>
     );
   }
@@ -496,10 +435,10 @@ Devuelve un JSON con esta estructura:
       <View style={[styles.header, isTablet && styles.headerTablet, isMobile && styles.headerMobile]}>
         <View style={[styles.headerContent, isTablet && styles.headerContentTablet, isMobile && styles.headerContentMobile]}>
           <Text style={[styles.title, isTablet && styles.titleTablet, isMobile && styles.titleMobile]}>
-            Editar Post del Blog
+            Editar Proyecto
           </Text>
           <Text style={[styles.subtitle, isTablet && styles.subtitleTablet, isMobile && styles.subtitleMobile]}>
-            Modifica los campos del post
+            Modifica los campos del proyecto
           </Text>
         </View>
         <View style={styles.headerButtons}>
@@ -526,7 +465,6 @@ Devuelve un JSON con esta estructura:
           >
             <Ionicons name="arrow-back" size={isTablet ? 24 : 20} color="#FFFFFF" />
           </TouchableOpacity>
-          {/* Botón de re-publicar en header eliminado; re-publicar está disponible por red en la sección de Redes Sociales */}
         </View>
       </View>
 
@@ -543,40 +481,51 @@ Devuelve un JSON con esta estructura:
               style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
               value={formData.title}
               onChangeText={(value) => handleInputChange('title', value)}
-              placeholder="Título del post"
+              placeholder="Título del proyecto"
               placeholderTextColor="rgba(255, 255, 255, 0.5)"
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Autor *</Text>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Subtítulo</Text>
             <TextInput
               style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
-              value={formData.author}
-              onChangeText={(value) => handleInputChange('author', value)}
-              placeholder="Nombre del autor"
+              value={formData.subtitle}
+              onChangeText={(value) => handleInputChange('subtitle', value)}
+              placeholder="Subtítulo del proyecto"
               placeholderTextColor="rgba(255, 255, 255, 0.5)"
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Fecha *</Text>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Categoría</Text>
+            <TextInput
+              style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
+              value={formData.category}
+              onChangeText={(value) => handleInputChange('category', value)}
+              placeholder="Ej: Smart Building, IoT Platform"
+              placeholderTextColor="rgba(255, 255, 255, 0.5)"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Empresa</Text>
+            <TextInput
+              style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
+              value={formData.company}
+              onChangeText={(value) => handleInputChange('company', value)}
+              placeholder="Nombre de la empresa"
+              placeholderTextColor="rgba(255, 255, 255, 0.5)"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Fecha</Text>
             <TextInput
               style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
               value={formData.date}
               onChangeText={(value) => handleInputChange('date', value)}
-              placeholder="Ej: 23 July 2024"
-              placeholderTextColor="rgba(255, 255, 255, 0.5)"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Evento</Text>
-            <TextInput
-              style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
-              value={formData.event}
-              onChangeText={(value) => handleInputChange('event', value)}
-              placeholder="Ej: Web Summit"
+              placeholder="Ej: 2024"
               placeholderTextColor="rgba(255, 255, 255, 0.5)"
             />
           </View>
@@ -587,7 +536,7 @@ Devuelve un JSON con esta estructura:
               style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
               value={formData.tags}
               onChangeText={(value) => handleInputChange('tags', value)}
-              placeholder="Ej: #emprendimiento #innovación #liderazgo"
+              placeholder="Ej: #iot #platform #azure #iothub"
               placeholderTextColor="rgba(255, 255, 255, 0.5)"
             />
           </View>
@@ -596,7 +545,7 @@ Devuelve un JSON con esta estructura:
           <View style={styles.toggleGroup}>
             <View style={styles.toggleRow}>
               <Text style={[styles.toggleLabel, isTablet && styles.toggleLabelTablet, isMobile && styles.toggleLabelMobile]}>
-                Estado del Post
+                Estado del Proyecto
               </Text>
               <View style={styles.toggleContainer}>
                 <Text style={[styles.toggleText, isDraft && styles.toggleTextActive]}>
@@ -614,7 +563,7 @@ Devuelve un JSON con esta estructura:
               </View>
             </View>
             <Text style={[styles.toggleDescription, isTablet && styles.toggleDescriptionTablet, isMobile && styles.toggleDescriptionMobile]}>
-              {isDraft ? 'El post está en borrador y no se muestra en la web' : 'El post está publicado y es visible en la web'}
+              {isDraft ? 'El proyecto está en borrador y no se muestra en la web' : 'El proyecto está publicado y es visible en la web'}
             </Text>
           </View>
           <View style={styles.cardAccent} />
@@ -627,12 +576,25 @@ Devuelve un JSON con esta estructura:
           </Text>
           
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Contenido modal (HTML) *</Text>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Descripción</Text>
             <TextInput
               style={[styles.textArea, isTablet && styles.textAreaTablet, isMobile && styles.textAreaMobile]}
-              value={formData.modalContent}
-              onChangeText={(value) => handleInputChange('modalContent', value)}
-              placeholder="Contenido HTML completo del blog post"
+              value={formData.description}
+              onChangeText={(value) => handleInputChange('description', value)}
+              placeholder="Descripción breve del proyecto"
+              placeholderTextColor="rgba(255, 255, 255, 0.5)"
+              multiline
+              numberOfLines={3}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Contenido completo (HTML)</Text>
+            <TextInput
+              style={[styles.textArea, isTablet && styles.textAreaTablet, isMobile && styles.textAreaMobile]}
+              value={formData.content}
+              onChangeText={(value) => handleInputChange('content', value)}
+              placeholder="Contenido HTML completo del proyecto"
               placeholderTextColor="rgba(255, 255, 255, 0.5)"
               multiline
               numberOfLines={12}
@@ -659,12 +621,23 @@ Devuelve un JSON con esta estructura:
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Slug</Text>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Imagen de detalle</Text>
             <TextInput
               style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
-              value={formData.slug}
-              onChangeText={(value) => handleInputChange('slug', value)}
-              placeholder="Ej: conexiones-que-impulsan-el-futuro-emprendedor"
+              value={formData.detailImage}
+              onChangeText={(value) => handleInputChange('detailImage', value)}
+              placeholder="Ruta de la imagen de detalle"
+              placeholderTextColor="rgba(255, 255, 255, 0.5)"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Website</Text>
+            <TextInput
+              style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
+              value={formData.website}
+              onChangeText={(value) => handleInputChange('website', value)}
+              placeholder="https://ejemplo.com"
               placeholderTextColor="rgba(255, 255, 255, 0.5)"
             />
           </View>
@@ -675,7 +648,7 @@ Devuelve un JSON con esta estructura:
               style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
               value={formData.path}
               onChangeText={(value) => handleInputChange('path', value)}
-              placeholder="Ej: /blog/conexiones-que-impulsan-el-futuro-emprendedor"
+              placeholder="Ej: /portfolio/nombre-proyecto"
               placeholderTextColor="rgba(255, 255, 255, 0.5)"
             />
           </View>
@@ -686,29 +659,218 @@ Devuelve un JSON con esta estructura:
               style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
               value={formData.url}
               onChangeText={(value) => handleInputChange('url', value)}
-              placeholder="https://asiergonzalez.es/blog/conexiones-que-impulsan-el-futuro-emprendedor"
+              placeholder="https://asiergonzalez.es/portfolio/nombre-proyecto"
               placeholderTextColor="rgba(255, 255, 255, 0.5)"
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Modal</Text>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Evento</Text>
             <TextInput
               style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
-              value={formData.modal}
-              onChangeText={(value) => handleInputChange('modal', value)}
-              placeholder="mymodal"
+              value={formData.event}
+              onChangeText={(value) => handleInputChange('event', value)}
+              placeholder="Ej: proyecto_view"
+              placeholderTextColor="rgba(255, 255, 255, 0.5)"
+            />
+          </View>
+          <View style={styles.cardAccent} />
+        </View>
+
+        {/* Medios adicionales */}
+        <View style={[styles.section, isTablet && styles.sectionTablet, isMobile && styles.sectionMobile]}>
+          <Text style={[styles.sectionTitle, isTablet && styles.sectionTitleTablet, isMobile && styles.sectionTitleMobile]}>
+            Medios Adicionales
+          </Text>
+          
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Brochure</Text>
+            <TextInput
+              style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
+              value={formData.brochure}
+              onChangeText={(value) => handleInputChange('brochure', value)}
+              placeholder="Ruta del brochure PDF"
               placeholderTextColor="rgba(255, 255, 255, 0.5)"
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Width</Text>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Video</Text>
             <TextInput
               style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
-              value={formData.width}
-              onChangeText={(value) => handleInputChange('width', value)}
-              placeholder="1200px"
+              value={formData.video}
+              onChangeText={(value) => handleInputChange('video', value)}
+              placeholder="Título del video"
+              placeholderTextColor="rgba(255, 255, 255, 0.5)"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Video Link</Text>
+            <TextInput
+              style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
+              value={formData.videolink1}
+              onChangeText={(value) => handleInputChange('videolink1', value)}
+              placeholder="https://www.youtube.com/embed/VIDEO_ID"
+              placeholderTextColor="rgba(255, 255, 255, 0.5)"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Video ID</Text>
+            <TextInput
+              style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
+              value={formData.video1}
+              onChangeText={(value) => handleInputChange('video1', value)}
+              placeholder="ID del video de YouTube"
+              placeholderTextColor="rgba(255, 255, 255, 0.5)"
+            />
+          </View>
+          <View style={styles.cardAccent} />
+        </View>
+
+        {/* Imágenes adicionales */}
+        <View style={[styles.section, isTablet && styles.sectionTablet, isMobile && styles.sectionMobile]}>
+          <Text style={[styles.sectionTitle, isTablet && styles.sectionTitleTablet, isMobile && styles.sectionTitleMobile]}>
+            Imágenes Adicionales
+          </Text>
+          
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Imagen 1</Text>
+            <TextInput
+              style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
+              value={formData.image1}
+              onChangeText={(value) => handleInputChange('image1', value)}
+              placeholder="Ruta de la imagen 1"
+              placeholderTextColor="rgba(255, 255, 255, 0.5)"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Imagen 2</Text>
+            <TextInput
+              style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
+              value={formData.image2}
+              onChangeText={(value) => handleInputChange('image2', value)}
+              placeholder="Ruta de la imagen 2"
+              placeholderTextColor="rgba(255, 255, 255, 0.5)"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Imagen 3</Text>
+            <TextInput
+              style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
+              value={formData.image3}
+              onChangeText={(value) => handleInputChange('image3', value)}
+              placeholder="Ruta de la imagen 3"
+              placeholderTextColor="rgba(255, 255, 255, 0.5)"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Imagen 4</Text>
+            <TextInput
+              style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
+              value={formData.image4}
+              onChangeText={(value) => handleInputChange('image4', value)}
+              placeholder="Ruta de la imagen 4"
+              placeholderTextColor="rgba(255, 255, 255, 0.5)"
+            />
+          </View>
+          <View style={styles.cardAccent} />
+        </View>
+
+        {/* Prensa */}
+        <View style={[styles.section, isTablet && styles.sectionTablet, isMobile && styles.sectionMobile]}>
+          <Text style={[styles.sectionTitle, isTablet && styles.sectionTitleTablet, isMobile && styles.sectionTitleMobile]}>
+            Prensa
+          </Text>
+          
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Prensa 1</Text>
+            <TextInput
+              style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
+              value={formData.press1}
+              onChangeText={(value) => handleInputChange('press1', value)}
+              placeholder="Título de la noticia 1"
+              placeholderTextColor="rgba(255, 255, 255, 0.5)"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Link Prensa 1</Text>
+            <TextInput
+              style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
+              value={formData.presslink1}
+              onChangeText={(value) => handleInputChange('presslink1', value)}
+              placeholder="https://ejemplo.com/noticia1"
+              placeholderTextColor="rgba(255, 255, 255, 0.5)"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Prensa 2</Text>
+            <TextInput
+              style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
+              value={formData.press2}
+              onChangeText={(value) => handleInputChange('press2', value)}
+              placeholder="Título de la noticia 2"
+              placeholderTextColor="rgba(255, 255, 255, 0.5)"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Link Prensa 2</Text>
+            <TextInput
+              style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
+              value={formData.presslink2}
+              onChangeText={(value) => handleInputChange('presslink2', value)}
+              placeholder="https://ejemplo.com/noticia2"
+              placeholderTextColor="rgba(255, 255, 255, 0.5)"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Prensa 3</Text>
+            <TextInput
+              style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
+              value={formData.press3}
+              onChangeText={(value) => handleInputChange('press3', value)}
+              placeholder="Título de la noticia 3"
+              placeholderTextColor="rgba(255, 255, 255, 0.5)"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Link Prensa 3</Text>
+            <TextInput
+              style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
+              value={formData.presslink3}
+              onChangeText={(value) => handleInputChange('presslink3', value)}
+              placeholder="https://ejemplo.com/noticia3"
+              placeholderTextColor="rgba(255, 255, 255, 0.5)"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Prensa 4</Text>
+            <TextInput
+              style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
+              value={formData.press4}
+              onChangeText={(value) => handleInputChange('press4', value)}
+              placeholder="Título de la noticia 4"
+              placeholderTextColor="rgba(255, 255, 255, 0.5)"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Link Prensa 4</Text>
+            <TextInput
+              style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]}
+              value={formData.presslink4}
+              onChangeText={(value) => handleInputChange('presslink4', value)}
+              placeholder="https://ejemplo.com/noticia4"
               placeholderTextColor="rgba(255, 255, 255, 0.5)"
             />
           </View>
@@ -823,7 +985,7 @@ Devuelve un JSON con esta estructura:
                                 published: { ...publishedStatus, linkedin: true } 
                               }
                             };
-                            await blogPostsService.update(postId, updateData);
+                            await projectsService.update(projectId, updateData);
                             
                             Alert.alert('Éxito', 'Publicado en LinkedIn');
                           } else {
@@ -904,7 +1066,7 @@ Devuelve un JSON con esta estructura:
                                 published: { ...publishedStatus, instagram: true } 
                               }
                             };
-                            await blogPostsService.update(postId, updateData);
+                            await projectsService.update(projectId, updateData);
                             
                             Alert.alert('Éxito', 'Publicado en Instagram');
                           } else {
@@ -985,7 +1147,7 @@ Devuelve un JSON con esta estructura:
                                 published: { ...publishedStatus, twitter: true } 
                               }
                             };
-                            await blogPostsService.update(postId, updateData);
+                            await projectsService.update(projectId, updateData);
                             
                             Alert.alert('Éxito', 'Publicado en Twitter/X');
                           } else {
@@ -1036,8 +1198,6 @@ Devuelve un JSON con esta estructura:
           )}
           <View style={styles.cardAccent} />
         </View>
-
-        {/* Botón de publicar eliminado a petición del usuario */}
       </ScrollView>
     </View>
   );
@@ -1065,10 +1225,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 16,
   },
-  backButton: {
-    padding: 8,
-    marginRight: 16,
-  },
   headerContent: {
     flex: 1,
   },
@@ -1091,14 +1247,6 @@ const styles = StyleSheet.create({
     padding: 10,
     backgroundColor: '#00ca77',
     borderRadius: 8,
-  },
-  iconHeaderButtonTablet: {
-    padding: 12,
-    borderRadius: 10,
-  },
-  iconHeaderButtonMobile: {
-    padding: 8,
-    borderRadius: 6,
   },
   cancelButton: {
     backgroundColor: '#FF9800',
@@ -1147,48 +1295,6 @@ const styles = StyleSheet.create({
   inputGroup: {
     marginBottom: 20,
   },
-  socialFieldHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  socialActionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  publishedChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#00ca77',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4,
-  },
-  publishedChipText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  postBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#00ca77',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    gap: 6,
-  },
-  postBtnDisabled: {
-    opacity: 0.6,
-  },
-  postBtnText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-  },
   label: {
     fontSize: 16,
     fontWeight: '500',
@@ -1227,10 +1333,6 @@ const styles = StyleSheet.create({
   headerTablet: {
     paddingHorizontal: 32,
     paddingVertical: 20,
-  },
-  backButtonTablet: {
-    padding: 12,
-    marginRight: 20,
   },
   headerContentTablet: {
     flex: 1,
@@ -1282,10 +1384,6 @@ const styles = StyleSheet.create({
   headerMobile: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-  },
-  backButtonMobile: {
-    padding: 6,
-    marginRight: 12,
   },
   headerContentMobile: {
     flex: 1,
@@ -1449,45 +1547,48 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
   },
-  socialInfoText: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: 14,
-    fontStyle: 'italic',
-    textAlign: 'center',
-    marginTop: 16,
-    paddingHorizontal: 16,
-    lineHeight: 20,
-  },
-
-  // Estilos para botones de acción
-  actionButtons: {
-    flexDirection: 'column',
-    gap: 12,
-    marginTop: 24,
-    marginBottom: 20,
-    paddingHorizontal: 24,
-  },
-  saveButtonText: {
-    display: 'none',
-  },
-  publishButton: {
-    backgroundColor: '#ff6b6b',
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    alignItems: 'center',
+  socialFieldHeader: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  socialActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
-  publishButtonDisabled: {
-    backgroundColor: 'rgba(255, 107, 107, 0.5)',
+  publishedChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#00ca77',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
   },
-  publishButtonText: {
+  publishedChipText: {
     color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 16,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  postBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#00ca77',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    gap: 6,
+  },
+  postBtnDisabled: {
+    opacity: 0.6,
+  },
+  postBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
   },
 });
 
-export default EditBlogPostScreen;
+export default EditProjectScreen;

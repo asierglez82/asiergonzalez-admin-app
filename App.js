@@ -12,14 +12,19 @@ import CreateBookScreen from './src/screens/CreateBookScreen';
 import BlogCRUDScreen from './src/screens/BlogCRUDScreen';
 import EditBlogPostScreen from './src/screens/EditBlogPostScreen';
 import ProjectsCRUDScreen from './src/screens/ProjectsCRUDScreen';
+import EditProjectScreen from './src/screens/EditProjectScreen';
 import QuotesCRUDScreen from './src/screens/QuotesCRUDScreen';
 import EditQuoteScreen from './src/screens/EditQuoteScreen';
 import PodcastCRUDScreen from './src/screens/PodcastCRUDScreen';
+import EditPodcastScreen from './src/screens/EditPodcastScreen';
 import BooksCRUDScreen from './src/screens/BooksCRUDScreen';
 import EditBookScreen from './src/screens/EditBookScreen';
 import ConferencesCRUDScreen from './src/screens/ConferencesCRUDScreen';
+import EditConferenceScreen from './src/screens/EditConferenceScreen';
 import TalksCRUDScreen from './src/screens/TalksCRUDScreen';
+import EditTalkScreen from './src/screens/EditTalkScreen';
 import InfographicsCRUDScreen from './src/screens/InfographicsCRUDScreen';
+import EditInfographicScreen from './src/screens/EditInfographicScreen';
 import MediaCRUDScreen from './src/screens/MediaCRUDScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import GeminiSettingsScreen from './src/screens/GeminiSettingsScreen';
@@ -116,6 +121,11 @@ const AuthenticatedApp = () => {
         options={{ title: 'Gestión Proyectos' }}
       />
       <Drawer.Screen 
+        name="EditProject" 
+        component={EditProjectScreen}
+        options={{ title: 'Editar Proyecto' }}
+      />
+      <Drawer.Screen 
         name="QuotesCRUD" 
         component={QuotesCRUDScreen}
         options={{ title: 'Gestión Quotes' }}
@@ -129,6 +139,11 @@ const AuthenticatedApp = () => {
         name="PodcastCRUD" 
         component={PodcastCRUDScreen}
         options={{ title: 'Gestión Podcasts' }}
+      />
+      <Drawer.Screen 
+        name="EditPodcast" 
+        component={EditPodcastScreen}
+        options={{ title: 'Editar Podcast' }}
       />
       <Drawer.Screen 
         name="BooksCRUD" 
@@ -146,14 +161,29 @@ const AuthenticatedApp = () => {
         options={{ title: 'Gestión Conferencias' }}
       />
       <Drawer.Screen 
+        name="EditConference" 
+        component={EditConferenceScreen}
+        options={{ title: 'Editar Conferencia' }}
+      />
+      <Drawer.Screen 
         name="TalksCRUD" 
         component={TalksCRUDScreen}
         options={{ title: 'Gestión Talks' }}
       />
       <Drawer.Screen 
+        name="EditTalk" 
+        component={EditTalkScreen}
+        options={{ title: 'Editar Talk' }}
+      />
+      <Drawer.Screen 
         name="InfographicsCRUD" 
         component={InfographicsCRUDScreen}
         options={{ title: 'Gestión Infografías' }}
+      />
+      <Drawer.Screen 
+        name="EditInfographic" 
+        component={EditInfographicScreen}
+        options={{ title: 'Editar Infografía' }}
       />
       <Drawer.Screen 
         name="MediaCRUD" 

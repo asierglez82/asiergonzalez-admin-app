@@ -1,34 +1,34 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Dimensions, ActivityIndicator, Switch } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { quotesService } from '../services/firestore';
+import { conferencesService } from '../services/firestore';
 import socialMediaService from '../config/socialMediaConfig';
 import { storageService } from '../services/storage';
 import geminiService from '../config/geminiConfig';
 
 const { width } = Dimensions.get('window');
 
-const EditQuoteScreen = ({ navigation, route }) => {
-  const { quoteId } = route.params;
+const EditConferenceScreen = ({ navigation, route }) => {
+  const { conferenceId } = route.params;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [screenData, setScreenData] = useState(Dimensions.get('window'));
-  const [quote, setQuote] = useState(null);
+  const [conference, setConference] = useState(null);
   const [isDraft, setIsDraft] = useState(true);
 
   const [formData, setFormData] = useState({
-    author: '',
-    category: '',
-    content: '', // HTML
-    date: '',
-    event: '',
+    title: '',
+    subtitle: '',
     image: '',
-    path: '',
-    slug: '',
-    url: '',
+    event: '',
     tags: '',
-    where: ''
+    date: '',
+    path: '',
+    url: '',
+    videopath: '',
+    slug: '',
+    description: ''
   });
 
   const [connectedPlatforms, setConnectedPlatforms] = useState({ instagram: false, twitter: false, linkedin: false });
@@ -55,25 +55,23 @@ const EditQuoteScreen = ({ navigation, route }) => {
     try {
       setGeneratingContent(true);
       
-      const prompt = `Genera contenido para redes sociales basado en esta quote:
+      const prompt = `Genera contenido para redes sociales basado en esta conferencia:
 
-Autor: ${formData.author || '[Sin autor]'}
-Categoría: ${formData.category || '[Sin categoría]'}
+Título: ${formData.title || '[Sin título]'}
+Subtítulo: ${formData.subtitle || '[Sin subtítulo]'}
 Fecha: ${formData.date || '[Sin fecha]'}
-Evento: ${formData.event || '[Sin evento]'}
 Tags: ${formData.tags || '[Sin tags]'}
-Dónde: ${formData.where || '[Sin ubicación]'}
-Contenido: ${formData.content ? formData.content.replace(/<[^>]+>/g, '').substring(0, 500) + '...' : '[Sin contenido]'}
+Descripción: ${formData.description || '[Sin descripción]'}
 
 IMPORTANTE: 
-- Los campos autor, categoría y fecha son fijos y NO deben ser generados ni modificados.
+- Los campos título, subtítulo y fecha son fijos y NO deben ser generados ni modificados.
 - NO uses emojis en ninguna de las respuestas.
 
 Genera contenido específico para cada plataforma:
 
-LinkedIn: Contenido profesional y detallado sobre la quote (máximo 3000 caracteres)
-Instagram: Contenido visual y atractivo sobre la quote (máximo 2200 caracteres)  
-Twitter: Contenido conciso y directo sobre la quote (máximo 280 caracteres)
+LinkedIn: Contenido profesional y detallado sobre la conferencia (máximo 3000 caracteres)
+Instagram: Contenido visual y atractivo sobre la conferencia (máximo 2200 caracteres)  
+Twitter: Contenido conciso y directo sobre la conferencia (máximo 280 caracteres)
 
 Devuelve un JSON con esta estructura:
 {
@@ -106,23 +104,23 @@ Devuelve un JSON con esta estructura:
 
   useEffect(() => { loadConnectedPlatforms(); }, []);
 
-  const loadQuote = async () => {
+  const loadConference = async () => {
     try {
       setLoading(true);
-      const data = await quotesService.getById(quoteId);
-      setQuote(data);
+      const data = await conferencesService.getById(conferenceId);
+      setConference(data);
       setFormData({
-        author: data.author || '',
-        category: data.category || '',
-        content: data.content || '',
-        date: data.date || '',
-        event: data.event || '',
+        title: data.title || '',
+        subtitle: data.subtitle || '',
         image: data.image || '',
-        path: data.path || '',
-        slug: data.slug || '',
-        url: data.url || '',
+        event: data.event || '',
         tags: data.tags || '',
-        where: data.where || ''
+        date: data.date || '',
+        path: data.path || '',
+        url: data.url || '',
+        videopath: data.videopath || '',
+        slug: data.slug || '',
+        description: data.description || ''
       });
       setIsDraft(data?.social?.draft !== false && data?.draft !== false);
       if (data.socialMedia) {
@@ -145,7 +143,7 @@ Devuelve un JSON con esta estructura:
         });
       }
     } catch (e) {
-      Alert.alert('Error', 'No se pudo cargar la quote');
+      Alert.alert('Error', 'No se pudo cargar la conferencia');
       navigation.goBack();
     } finally {
       setLoading(false);
@@ -153,19 +151,19 @@ Devuelve un JSON con esta estructura:
   };
 
   useEffect(() => {
-    if (quoteId) loadQuote(); else { Alert.alert('Error', 'Falta ID'); navigation.goBack(); }
-  }, [quoteId]);
+    if (conferenceId) loadConference(); else { Alert.alert('Error', 'Falta ID'); navigation.goBack(); }
+  }, [conferenceId]);
 
   const handleInputChange = (field, value) => setFormData(prev => ({ ...prev, [field]: value }));
 
-  const handleBack = () => navigation.navigate('QuotesCRUD');
+  const handleBack = () => navigation.navigate('ConferencesCRUD');
 
-  // Asegurar URL pública de imagen: si no es http(s), subir a Storage (quotes-images)
+  // Asegurar URL pública de imagen: si no es http(s), subir a Storage (conference-images)
   const ensurePublicImageUrl = async (imageUrl) => {
     try {
       if (!imageUrl) return '';
       if (/^https?:\/\//i.test(imageUrl)) return imageUrl;
-      const upload = await storageService.uploadImage(imageUrl, 'quotes-images');
+      const upload = await storageService.uploadImage(imageUrl, 'conference-images');
       return upload?.success ? upload.url : '';
     } catch (e) {
       return '';
@@ -173,39 +171,39 @@ Devuelve un JSON con esta estructura:
   };
 
   const handleCancel = () => {
-    if (!quote) return;
+    if (!conference) return;
     setFormData({
-      author: quote.author || '',
-      category: quote.category || '',
-      content: quote.content || '',
-      date: quote.date || '',
-      event: quote.event || '',
-      image: quote.image || '',
-      path: quote.path || '',
-      slug: quote.slug || '',
-      url: quote.url || '',
-      tags: quote.tags || '',
-      where: quote.where || ''
+      author: conference.author || '',
+      category: conference.category || '',
+      content: conference.content || '',
+      date: conference.date || '',
+      event: conference.event || '',
+      image: conference.image || '',
+      path: conference.path || '',
+      slug: conference.slug || '',
+      url: conference.url || '',
+      tags: conference.tags || '',
+      where: conference.where || ''
     });
     setIsDraft(quote?.social?.draft !== false && quote?.draft !== false);
-    if (quote.socialMedia) {
+    if (conference.socialMedia) {
       setSocialMediaData({
-        linkedin: quote.socialMedia.linkedin || '',
-        instagram: quote.socialMedia.instagram || '',
-        twitter: quote.socialMedia.twitter || '',
+        linkedin: conference.socialMedia.linkedin || '',
+        instagram: conference.socialMedia.instagram || '',
+        twitter: conference.socialMedia.twitter || '',
         settings: {
-          genLinkedin: quote.socialMedia.settings?.genLinkedin !== false,
-          genInstagram: quote.socialMedia.settings?.genInstagram !== false,
-          genTwitter: quote.socialMedia.settings?.genTwitter || false,
+          genLinkedin: conference.socialMedia.settings?.genLinkedin !== false,
+          genInstagram: conference.socialMedia.settings?.genInstagram !== false,
+          genTwitter: conference.socialMedia.settings?.genTwitter || false,
         },
       });
       setPublishedStatus({
-        linkedin: quote.socialMedia?.published?.linkedin === true,
-        instagram: quote.socialMedia?.published?.instagram === true,
-        twitter: quote.socialMedia?.published?.twitter === true,
+        linkedin: conference.socialMedia?.published?.linkedin === true,
+        instagram: conference.socialMedia?.published?.instagram === true,
+        twitter: conference.socialMedia?.published?.twitter === true,
       });
     }
-    Alert.alert('Cambios deshechos', 'Se han restaurado los valores originales de la quote');
+    Alert.alert('Cambios deshechos', 'Se han restaurado los valores originales de la conferencia');
   };
 
   const handleSave = async () => {
@@ -218,10 +216,10 @@ Devuelve un JSON con esta estructura:
         updatedAt: new Date(),
         socialMedia: { ...socialMediaData, published: publishedStatus },
       };
-      await quotesService.update(quoteId, updateData);
-      Alert.alert('Éxito', 'Quote actualizada', [{ text: 'OK', onPress: () => navigation.navigate('QuotesCRUD') }]);
+      await conferencesService.update(conferenceId, updateData);
+      Alert.alert('Éxito', 'Conferencia actualizada', [{ text: 'OK', onPress: () => navigation.navigate('ConferencesCRUD') }]);
     } catch (e) {
-      Alert.alert('Error', 'No se pudo actualizar la quote');
+      Alert.alert('Error', 'No se pudo actualizar la conferencia');
     } finally {
       setSaving(false);
     }
@@ -276,7 +274,7 @@ Devuelve un JSON con esta estructura:
             published: { ...publishedStatus, [platform]: true } 
           }
         };
-        await quotesService.update(quoteId, updateData);
+        await conferencesService.update(conferenceId, updateData);
         
         Alert.alert('Éxito', `Re-publicado en ${platform === 'twitter' ? 'Twitter/X' : platform.charAt(0).toUpperCase() + platform.slice(1)}`);
       } else {
@@ -300,7 +298,7 @@ Devuelve un JSON con esta estructura:
         updatedAt: new Date(),
         socialMedia: { ...socialMediaData, published: publishedStatus },
       };
-      await quotesService.update(quoteId, updateData);
+      await conferencesService.update(conferenceId, updateData);
 
       const platformsContent = {};
       if (connectedPlatforms.linkedin && socialMediaData.linkedin && socialMediaData.settings.genLinkedin) platformsContent.linkedin = socialMediaData.linkedin;
@@ -310,9 +308,9 @@ Devuelve un JSON con esta estructura:
       if (Object.keys(platformsContent).length > 0) {
         try { result = await socialMediaService.publishToMultiplePlatforms(platformsContent, formData.image); } catch {}
       }
-      Alert.alert('Publicación completada', 'Quote publicada correctamente' + (result?.success ? ' y publicada en redes' : ''), [{ text: 'OK', onPress: () => navigation.navigate('QuotesCRUD') }]);
+      Alert.alert('Publicación completada', 'Quote publicada correctamente' + (result?.success ? ' y publicada en redes' : ''), [{ text: 'OK', onPress: () => navigation.navigate('ConferencesCRUD') }]);
     } catch (e) {
-      Alert.alert('Error', 'No se pudo publicar la quote');
+      Alert.alert('Error', 'No se pudo publicar la conferencia');
     } finally {
       setSaving(false);
     }
@@ -322,7 +320,7 @@ Devuelve un JSON con esta estructura:
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#00ca77" />
-        <Text style={styles.loadingText}>Cargando quote...</Text>
+        <Text style={styles.loadingText}>Cargando conference...</Text>
       </View>
     );
   }
@@ -334,8 +332,8 @@ Devuelve un JSON con esta estructura:
     <View style={styles.container}>
       <View style={[styles.header, isTablet && styles.headerTablet, isMobile && styles.headerMobile]}>
         <View style={[styles.headerContent, isTablet && styles.headerContentTablet, isMobile && styles.headerContentMobile]}>
-          <Text style={[styles.title, isTablet && styles.titleTablet, isMobile && styles.titleMobile]}>Editar Quote</Text>
-          <Text style={[styles.subtitle, isTablet && styles.subtitleTablet, isMobile && styles.subtitleMobile]}>Modifica los campos de la quote</Text>
+          <Text style={[styles.title, isTablet && styles.titleTablet, isMobile && styles.titleMobile]}>Editar Conferencia</Text>
+          <Text style={[styles.subtitle, isTablet && styles.subtitleTablet, isMobile && styles.subtitleMobile]}>Modifica los campos de la conferencia</Text>
         </View>
         <View style={styles.headerButtons}>
           <TouchableOpacity style={[styles.cancelButton, isTablet && styles.cancelButtonTablet, isMobile && styles.cancelButtonMobile]} onPress={handleCancel}>
@@ -355,28 +353,28 @@ Devuelve un JSON con esta estructura:
           <Text style={[styles.sectionTitle, isTablet && styles.sectionTitleTablet, isMobile && styles.sectionTitleMobile]}>Información Básica</Text>
 
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Autor *</Text>
-            <TextInput style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]} value={formData.author} onChangeText={(v)=>handleInputChange('author', v)} placeholder="Autor" placeholderTextColor="rgba(255,255,255,0.5)" />
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Título *</Text>
+            <TextInput style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]} value={formData.title} onChangeText={(v)=>handleInputChange('title', v)} placeholder="Título de la conferencia" placeholderTextColor="rgba(255,255,255,0.5)" />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Subtítulo</Text>
+            <TextInput style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]} value={formData.subtitle} onChangeText={(v)=>handleInputChange('subtitle', v)} placeholder="Subtítulo de la conferencia" placeholderTextColor="rgba(255,255,255,0.5)" />
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Fecha</Text>
-            <TextInput style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]} value={formData.date} onChangeText={(v)=>handleInputChange('date', v)} placeholder="Ej: 2024" placeholderTextColor="rgba(255,255,255,0.5)" />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Lugar/Evento</Text>
-            <TextInput style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]} value={formData.where} onChangeText={(v)=>handleInputChange('where', v)} placeholder="Ej: Madrid · South Summit" placeholderTextColor="rgba(255,255,255,0.5)" />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Categoría</Text>
-            <TextInput style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]} value={formData.category} onChangeText={(v)=>handleInputChange('category', v)} placeholder="Ej: Innovación" placeholderTextColor="rgba(255,255,255,0.5)" />
+            <TextInput style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]} value={formData.date} onChangeText={(v)=>handleInputChange('date', v)} placeholder="Ej: 2018" placeholderTextColor="rgba(255,255,255,0.5)" />
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Tags</Text>
-            <TextInput style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]} value={formData.tags} onChangeText={(v)=>handleInputChange('tags', v)} placeholder="Ej: #data #ai" placeholderTextColor="rgba(255,255,255,0.5)" />
+            <TextInput style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]} value={formData.tags} onChangeText={(v)=>handleInputChange('tags', v)} placeholder="Ej: #aguasdeburgos #iot #smartwater" placeholderTextColor="rgba(255,255,255,0.5)" />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Evento</Text>
+            <TextInput style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]} value={formData.event} onChangeText={(v)=>handleInputChange('event', v)} placeholder="Ej: aguasburgos_conference_view" placeholderTextColor="rgba(255,255,255,0.5)" />
           </View>
 
           <View style={styles.toggleGroup}>
@@ -393,10 +391,14 @@ Devuelve un JSON con esta estructura:
         </View>
 
         <View style={[styles.section, isTablet && styles.sectionTablet, isMobile && styles.sectionMobile]}>
-          <Text style={[styles.sectionTitle, isTablet && styles.sectionTitleTablet, isMobile && styles.sectionTitleMobile]}>Contenido HTML</Text>
+          <Text style={[styles.sectionTitle, isTablet && styles.sectionTitleTablet, isMobile && styles.sectionTitleMobile]}>Contenido y Video</Text>
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Contenido</Text>
-            <TextInput style={[styles.textArea, isTablet && styles.textAreaTablet, isMobile && styles.textAreaMobile]} value={formData.content} onChangeText={(v)=>handleInputChange('content', v)} placeholder="HTML de la quote" placeholderTextColor="rgba(255,255,255,0.5)" multiline numberOfLines={10} />
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Descripción</Text>
+            <TextInput style={[styles.textArea, isTablet && styles.textAreaTablet, isMobile && styles.textAreaMobile]} value={formData.description} onChangeText={(v)=>handleInputChange('description', v)} placeholder="Descripción de la conferencia" placeholderTextColor="rgba(255,255,255,0.5)" multiline numberOfLines={4} />
+          </View>
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, isTablet && styles.labelTablet, isMobile && styles.labelMobile]}>Video Path (YouTube Embed)</Text>
+            <TextInput style={[styles.input, isTablet && styles.inputTablet, isMobile && styles.inputMobile]} value={formData.videopath} onChangeText={(v)=>handleInputChange('videopath', v)} placeholder="https://www.youtube.com/embed/..." placeholderTextColor="rgba(255,255,255,0.5)" />
           </View>
           <View style={styles.cardAccent} />
         </View>
@@ -502,7 +504,7 @@ Devuelve un JSON con esta estructura:
                                 published: { ...publishedStatus, linkedin: true } 
                               }
                             };
-                            await quotesService.update(quoteId, updateData);
+                            await conferencesService.update(conferenceId, updateData);
                             
                             Alert.alert('Éxito', 'Publicado en LinkedIn');
                           } else {
@@ -599,7 +601,7 @@ Devuelve un JSON con esta estructura:
                                 published: { ...publishedStatus, instagram: true } 
                               }
                             };
-                            await quotesService.update(quoteId, updateData);
+                            await conferencesService.update(conferenceId, updateData);
                             
                             Alert.alert('Éxito', 'Publicado en Instagram');
                           } else {
@@ -680,7 +682,7 @@ Devuelve un JSON con esta estructura:
                                 published: { ...publishedStatus, twitter: true } 
                               }
                             };
-                            await quotesService.update(quoteId, updateData);
+                            await conferencesService.update(conferenceId, updateData);
                             
                             Alert.alert('Éxito', 'Publicado en Twitter/X');
                           } else {
@@ -809,6 +811,6 @@ const styles = StyleSheet.create({
   textAreaMobile: { paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, borderRadius: 6, minHeight: 90 },
 });
 
-export default EditQuoteScreen;
+export default EditConferenceScreen;
 
 
