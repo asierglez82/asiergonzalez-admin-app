@@ -21,6 +21,7 @@ const ContentEditorScreen = ({ navigation }) => {
   const horizontalPadding = 48; // 24 + 24
   const interItemGap = 12;
   const actionCardWidth = (windowWidth - horizontalPadding - (actionsPerRow - 1) * interItemGap) / actionsPerRow;
+  
 
   const ActionCard = ({ title, description, color, icon, onPress }) => (
     <TouchableOpacity style={[styles.actionCard, { width: actionCardWidth }]} onPress={onPress}>
@@ -70,13 +71,7 @@ const ContentEditorScreen = ({ navigation }) => {
           icon="chatbox-ellipses-outline"
           onPress={() => navigation.navigate('CreateQuote')}
         />
-        <ActionCard
-          title="Episodio Podcast"
-          description="Nuevo episodio del podcast"
-          color="#FF3B30"
-          icon="mic-outline"
-          onPress={() => navigation.navigate('CreatePodcast')}
-        />
+    
         <ActionCard
           title="Reseña de Libro"
           description="Agregar libro al catálogo"
@@ -91,6 +86,7 @@ const ContentEditorScreen = ({ navigation }) => {
           icon="calendar-outline"
           onPress={() => navigation.navigate('CreateConference')}
         />
+       
         <ActionCard
           title="Nuevo Media & Press"
           description="Agregar media al portfolio"
@@ -106,12 +102,27 @@ const ContentEditorScreen = ({ navigation }) => {
           onPress={() => navigation.navigate('CreateInfographic')}
         />
         <ActionCard
+          title="Nuevo Proyecto"
+          description="Agregar nuevo proyecto"
+          color="#FF9500"
+          icon="folder-outline"
+          onPress={() => navigation.navigate('CreateProject')}
+        />
+        <ActionCard
           title="Nuevo Talk"
           description="Agregar nuevo talk"
           color="#FF375F"
           icon="podium-outline"
           onPress={() => navigation.navigate('CreateTalk')}
         />
+            <ActionCard
+              title="Nuevo Podcast"
+              description="Crear episodio de podcast"
+              color="#FF3B30"
+              icon="mic-outline"
+              onPress={() => navigation.navigate('CreatePodcast')}
+            />
+            
       </View>
 
       {/* Sección de Gestión */}
@@ -185,6 +196,7 @@ const ContentEditorScreen = ({ navigation }) => {
           onPress={() => navigation.navigate('TalksCRUD')}
         />
       </View>
+
     </ScrollView>
   );
 };
