@@ -35,6 +35,8 @@ import MediaCRUDScreen from './src/screens/MediaCRUDScreen';
 import EditMediaScreen from './src/screens/EditMediaScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import GeminiSettingsScreen from './src/screens/GeminiSettingsScreen';
+import CRMScreen from './src/screens/CRMScreen';
+import EditContactScreen from './src/screens/EditContactScreen';
 import Sidebar from './src/components/Sidebar';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -96,6 +98,16 @@ const AuthenticatedApp = () => {
         name="ContentEditor" 
         component={ContentEditorScreen}
         options={{ title: 'Editor de Contenido' }}
+      />
+      <Drawer.Screen 
+        name="CRM" 
+        component={CRMScreen}
+        options={{ title: 'CRM' }}
+      />
+      <Drawer.Screen 
+        name="EditContact" 
+        component={EditContactScreen}
+        options={{ title: 'Editar Contacto' }}
       />
       <Drawer.Screen 
         name="CreatePost" 

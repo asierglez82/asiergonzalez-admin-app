@@ -17,6 +17,7 @@
     "@react-navigation/stack": "^7.4.8",
     "dom-to-image": "^2.6.0",
     "expo": "~54.0.10",
+    "expo-document-picker": "^14.0.7",
     "expo-file-system": "~19.0.15",
     "expo-image-picker": "~17.0.8",
     "expo-linear-gradient": "^15.0.7",
@@ -35,5 +36,9 @@
     "react-native-view-shot": "4.0.3",
     "react-native-web": "^0.21.0"
   },
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "firebase-admin": "^13.5.0",
+    "xlsx": "^0.18.5"
+  }
 }

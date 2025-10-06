@@ -17,6 +17,11 @@ const Sidebar = ({ navigation, state }) => {
       route: 'ContentEditor',
       description: 'Crear y editar contenido'
     },
+    { 
+      name: 'CRM', 
+      route: 'CRM',
+      description: 'Gestionar contactos y leads'
+    },
     
     { 
       name: 'Configuración', 
@@ -148,6 +153,9 @@ const Sidebar = ({ navigation, state }) => {
         {/* Quick Actions */}
         <View style={styles.quickActions}>
           <Text style={styles.sectionLabel}>QUICK ACTIONS</Text>
+          <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('CRM')}>
+            <Text style={styles.actionText}>CRM</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('CreatePost')}>
             <Text style={styles.actionText}>New Post</Text>
           </TouchableOpacity>
