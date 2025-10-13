@@ -7,7 +7,7 @@ import ViewShot, { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import CustomDatePicker from '../components/CustomDatePicker';
 import { quotesService } from '../services/firestore';
 import { storageService } from '../services/storage';
 import socialMediaService from '../config/socialMediaConfig';
@@ -156,6 +156,13 @@ const CreateQuoteScreen = ({ navigation }) => {
     loadConnectedPlatforms();
   }, []);
 
+  // Sincronizar imageUrl con image cuando se selecciona una imagen
+  useEffect(() => {
+    if (imageUrl && imageUrl !== image) {
+      setImage(imageUrl);
+    }
+  }, [imageUrl]);
+
   const loadConnectedPlatforms = async () => {
     try {
       const platforms = await socialMediaService.getConnectedPlatforms();
@@ -165,11 +172,6 @@ const CreateQuoteScreen = ({ navigation }) => {
     }
   };
 
-  const parseDate = (dateString) => {
-    if (!dateString) return new Date();
-    const [day, month, year] = dateString.split('-');
-    return new Date(year, month - 1, day);
-  };
 
   const handleDateChange = (event, selectedDate) => {
     setShowDatePicker(false);
@@ -900,30 +902,41 @@ const CreateQuoteScreen = ({ navigation }) => {
         </View>
 
         {/* Fecha */}
-        <View style={styles.fieldCard}>
-          <View style={[styles.iconSquare, { backgroundColor: '#00ca77', borderColor: '#00ca77' }]}>
-            <Ionicons name="calendar-outline" size={18} color="#ffffff" />
-          </View>
-          <View style={styles.fieldContent}>
-            <Text style={styles.label}>Fecha</Text>
-            <TouchableOpacity 
-              style={styles.input} 
-              onPress={() => setShowDatePicker(true)}
-            >
-              <Text style={styles.dateText}>{date || 'Seleccionar fecha'}</Text>
-              <Ionicons name="calendar-outline" size={20} color="rgba(255,255,255,0.6)" />
-            </TouchableOpacity>
-          </View>
-          <View style={[styles.cardAccent, { backgroundColor: '#00ca77' }]} />
-        </View>
-
-        {showDatePicker && (
-          <DateTimePicker
-            value={parseDate(date)}
-            mode="date"
-            display="default"
+        {Platform.OS === 'web' ? (
+          <CustomDatePicker
+            value={date}
             onChange={handleDateChange}
+            showPicker={showDatePicker}
+            onShowPicker={() => setShowDatePicker(true)}
+            styles={styles}
           />
+        ) : (
+          <>
+            <View style={styles.fieldCard}>
+              <View style={[styles.iconSquare, { backgroundColor: '#00ca77', borderColor: '#00ca77' }]}>
+                <Ionicons name="calendar-outline" size={18} color="#ffffff" />
+              </View>
+              <View style={styles.fieldContent}>
+                <Text style={styles.label}>Fecha</Text>
+                <TouchableOpacity 
+                  style={styles.input} 
+                  onPress={() => setShowDatePicker(true)}
+                >
+                  <Text style={styles.dateText}>{date || 'Seleccionar fecha'}</Text>
+                  <Ionicons name="calendar-outline" size={20} color="rgba(255,255,255,0.6)" />
+                </TouchableOpacity>
+              </View>
+              <View style={[styles.cardAccent, { backgroundColor: '#00ca77' }]} />
+            </View>
+
+            <CustomDatePicker
+              value={date}
+              onChange={handleDateChange}
+              showPicker={showDatePicker}
+              onShowPicker={() => setShowDatePicker(true)}
+              styles={styles}
+            />
+          </>
         )}
 
         {/* Evento */}

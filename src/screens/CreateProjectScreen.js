@@ -7,7 +7,6 @@ import ViewShot, { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { projectsService } from '../services/firestore';
 import { storageService } from '../services/storage';
 import socialMediaService from '../config/socialMediaConfig';
@@ -152,6 +151,13 @@ const CreateProjectScreen = ({ navigation }) => {
   useEffect(() => {
     loadConnectedPlatforms();
   }, []);
+
+  // Sincronizar imageUrl con image cuando se selecciona una imagen
+  useEffect(() => {
+    if (imageUrl && imageUrl !== image) {
+      setImage(imageUrl);
+    }
+  }, [imageUrl]);
 
   const loadConnectedPlatforms = async () => {
     try {
