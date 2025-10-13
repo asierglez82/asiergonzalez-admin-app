@@ -649,6 +649,19 @@ Devuelve SOLO la descripción en MAYÚSCULAS, sin comillas ni formato adicional.
         try {
           console.log('Capturando y subiendo imagen automáticamente...');
           
+          // Esperar un momento para asegurar que el DOM esté completamente renderizado
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Verificar que el elemento tenga dimensiones válidas
+          if (Platform.OS === 'web') {
+            const hasValidDimensions = composeRef.current.offsetWidth > 0 && composeRef.current.offsetHeight > 0;
+            console.log('Dimensiones del composeRef:', composeRef.current.offsetWidth, 'x', composeRef.current.offsetHeight);
+            if (!hasValidDimensions) {
+              console.warn('composeRef no tiene dimensiones válidas, esperando más tiempo...');
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+          }
+          
           let imageData;
           
           if (Platform.OS === 'web') {
@@ -795,6 +808,19 @@ Devuelve SOLO la descripción en MAYÚSCULAS, sin comillas ni formato adicional.
       if (composeRef.current) {
         try {
           console.log('Capturando y subiendo imagen automáticamente...');
+          
+          // Esperar un momento para asegurar que el DOM esté completamente renderizado
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Verificar que el elemento tenga dimensiones válidas
+          if (Platform.OS === 'web') {
+            const hasValidDimensions = composeRef.current.offsetWidth > 0 && composeRef.current.offsetHeight > 0;
+            console.log('Dimensiones del composeRef:', composeRef.current.offsetWidth, 'x', composeRef.current.offsetHeight);
+            if (!hasValidDimensions) {
+              console.warn('composeRef no tiene dimensiones válidas, esperando más tiempo...');
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+          }
           
           let imageData;
           
