@@ -551,7 +551,31 @@ Devuelve SOLO la descripción en MAYÚSCULAS, sin comillas ni formato adicional.
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.9 });
     if (!result.canceled) {
       const uri = result.assets?.[0]?.uri;
-      if (uri) setImageUrl(uri);
+      if (uri) {
+        // En web, convertir a base64 para evitar problemas CORS con dom-to-image
+        if (Platform.OS === 'web') {
+          try {
+            console.log('[pickImage] Convirtiendo imagen a base64 desde:', uri);
+            const response = await fetch(uri);
+            const blob = await response.blob();
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              console.log('[pickImage] Imagen convertida a base64, tamaño:', reader.result.length, 'caracteres');
+              setImageUrl(reader.result); // Base64 data URL
+            };
+            reader.onerror = (error) => {
+              console.error('[pickImage] Error en FileReader:', error);
+              setImageUrl(uri); // Fallback a URI original
+            };
+            reader.readAsDataURL(blob);
+          } catch (error) {
+            console.warn('[pickImage] Error convirtiendo imagen a base64:', error);
+            setImageUrl(uri); // Fallback a URI original
+          }
+        } else {
+          setImageUrl(uri);
+        }
+      }
     }
   };
 
@@ -564,7 +588,31 @@ Devuelve SOLO la descripción en MAYÚSCULAS, sin comillas ni formato adicional.
     const result = await ImagePicker.launchCameraAsync({ quality: 0.9 });
     if (!result.canceled) {
       const uri = result.assets?.[0]?.uri;
-      if (uri) setImageUrl(uri);
+      if (uri) {
+        // En web, convertir a base64 para evitar problemas CORS con dom-to-image
+        if (Platform.OS === 'web') {
+          try {
+            console.log('[takePhoto] Convirtiendo imagen a base64 desde:', uri);
+            const response = await fetch(uri);
+            const blob = await response.blob();
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              console.log('[takePhoto] Imagen convertida a base64, tamaño:', reader.result.length, 'caracteres');
+              setImageUrl(reader.result); // Base64 data URL
+            };
+            reader.onerror = (error) => {
+              console.error('[takePhoto] Error en FileReader:', error);
+              setImageUrl(uri); // Fallback a URI original
+            };
+            reader.readAsDataURL(blob);
+          } catch (error) {
+            console.warn('[takePhoto] Error convirtiendo imagen a base64:', error);
+            setImageUrl(uri); // Fallback a URI original
+          }
+        } else {
+          setImageUrl(uri);
+        }
+      }
     }
   };
 
@@ -608,6 +656,40 @@ Devuelve SOLO la descripción en MAYÚSCULAS, sin comillas ni formato adicional.
     } catch (error) {
       console.error('Error in handleDeleteImage:', error);
       Alert.alert('Error', 'Error al procesar la eliminación');
+    }
+  };
+
+  // Función helper para esperar a que todas las imágenes se carguen
+  const waitForImagesToLoad = async () => {
+    if (Platform.OS === 'web' && composeRef.current) {
+      const images = composeRef.current.querySelectorAll('img');
+      if (images.length > 0) {
+        console.log(`Esperando a que ${images.length} imagen(es) se carguen...`);
+        await Promise.all(
+          Array.from(images).map(img => {
+            if (img.complete) {
+              console.log('Imagen ya cargada:', img.src);
+              return Promise.resolve();
+            }
+            return new Promise((resolve) => {
+              img.onload = () => {
+                console.log('Imagen cargada:', img.src);
+                resolve();
+              };
+              img.onerror = () => {
+                console.warn('Error cargando imagen:', img.src);
+                resolve(); // Resolver de todos modos para no bloquear
+              };
+              // Timeout de seguridad
+              setTimeout(() => {
+                console.warn('Timeout esperando imagen:', img.src);
+                resolve();
+              }, 5000);
+            });
+          })
+        );
+        console.log('Todas las imágenes cargadas, procediendo con captura...');
+      }
     }
   };
 
@@ -661,6 +743,9 @@ Devuelve SOLO la descripción en MAYÚSCULAS, sin comillas ni formato adicional.
               await new Promise(resolve => setTimeout(resolve, 1000));
             }
           }
+          
+          // Esperar a que todas las imágenes estén cargadas
+          await waitForImagesToLoad();
           
           let imageData;
           
@@ -821,6 +906,9 @@ Devuelve SOLO la descripción en MAYÚSCULAS, sin comillas ni formato adicional.
               await new Promise(resolve => setTimeout(resolve, 1000));
             }
           }
+          
+          // Esperar a que todas las imágenes estén cargadas
+          await waitForImagesToLoad();
           
           let imageData;
           

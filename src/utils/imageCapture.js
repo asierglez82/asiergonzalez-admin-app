@@ -70,3 +70,4 @@ export const captureCompose = async (composeRef, domtoimage = null) => {
   return imageData;
 };
 
+

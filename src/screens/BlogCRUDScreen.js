@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Dimensions, Image, ActivityIndicator, Platform, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Dimensions, Image, ActivityIndicator, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { blogPostsService } from '../services/firestore';
 import { storageService } from '../services/storage';
@@ -75,16 +75,22 @@ const BlogCRUDScreen = ({ navigation }) => {
     console.log('postId type:', typeof postId);
     
     const post = blogPosts.find(p => p.id === postId);
+    console.log('Post found for deletion:', post);
     setPostToDelete(post);
     setShowDeleteModal(true);
+    console.log('Modal should now be visible');
   };
 
   const confirmDelete = () => {
+    console.log('🔴 confirmDelete called!');
+    console.log('postToDelete:', postToDelete);
     if (postToDelete) {
       console.log('User confirmed deletion, calling deleteBlogPost with:', postToDelete.id);
       deleteBlogPost(postToDelete.id);
       setShowDeleteModal(false);
       setPostToDelete(null);
+    } else {
+      console.error('❌ No postToDelete found!');
     }
   };
 
@@ -277,11 +283,12 @@ const BlogCRUDScreen = ({ navigation }) => {
   const isMobile = screenData.width < 768;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={[
-      styles.scrollContent,
-      isTablet && styles.scrollContentTablet,
-      isMobile && styles.scrollContentMobile
-    ]}>
+    <View style={styles.container}>
+      <ScrollView style={styles.scrollContainer} contentContainerStyle={[
+        styles.scrollContent,
+        isTablet && styles.scrollContentTablet,
+        isMobile && styles.scrollContentMobile
+      ]}>
       <View style={[
         styles.header,
         isTablet && styles.headerTablet,
@@ -383,14 +390,10 @@ const BlogCRUDScreen = ({ navigation }) => {
           ))
         )}
       </View>
+      </ScrollView>
 
       {/* Modal de confirmación de eliminación */}
-      <Modal
-        visible={showDeleteModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={cancelDelete}
-      >
+      {showDeleteModal && (
         <View style={styles.modalOverlay}>
           <View style={[
             styles.modalContainer,
@@ -461,7 +464,10 @@ const BlogCRUDScreen = ({ navigation }) => {
                   isTablet && styles.modalButtonTablet,
                   isMobile && styles.modalButtonMobile
                 ]}
-                onPress={confirmDelete}
+                onPress={() => {
+                  console.log('🟢 Delete button in modal pressed!');
+                  confirmDelete();
+                }}
               >
                 <Text style={[
                   styles.deleteModalButtonText,
@@ -474,8 +480,8 @@ const BlogCRUDScreen = ({ navigation }) => {
             </View>
           </View>
         </View>
-      </Modal>
-    </ScrollView>
+      )}
+    </View>
   );
 };
 
@@ -483,6 +489,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#333b4d',
+  },
+  scrollContainer: {
+    flex: 1,
   },
   scrollContent: {
     padding: 24,
@@ -917,11 +926,23 @@ const styles = StyleSheet.create({
 
   // Modal styles
   modalOverlay: {
-    flex: 1,
+    ...Platform.select({
+      web: {
+        position: 'fixed',
+      },
+      default: {
+        position: 'absolute',
+      }
+    }),
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+    zIndex: 9999,
   },
   modalContainer: {
     backgroundColor: '#2c3e50',

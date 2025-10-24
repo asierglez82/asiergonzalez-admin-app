@@ -24,7 +24,14 @@ export async function generateWithGemini(prompt, system = '') {
 
 export function buildPrompt({ imageUrl, location, date, event, people, language, notes, phrase }) {
   const ppl = people ? people.split(',').map(p => p.trim()).filter(Boolean).join(', ') : 'N/A';
-  return `Idioma: ${language}\n\nFoto: ${imageUrl}\nLocalización: ${location}\nFecha: ${date}\nEvento: ${event}\nPersonas: ${ppl}\n\nNotas: ${notes}\n\nFrase actual: ${phrase}\n\nTareas:\n1) Reescribe la frase (misma intención, 1-2 líneas).\n2) Escribe un texto breve para la web (70-120 palabras).\n3) Devuelve un JSON con: { phrase, webText, cta, hashtags } (máximo 2 hashtags).`;
+  
+  // No incluir la imagen completa en el prompt si es muy grande (base64)
+  // Solo indicar si hay imagen disponible
+  const imageInfo = imageUrl ? 
+    (imageUrl.startsWith('data:') ? 'Imagen proporcionada (disponible para contexto visual)' : imageUrl) 
+    : 'No proporcionada';
+  
+  return `Idioma: ${language}\n\nFoto: ${imageInfo}\nLocalización: ${location}\nFecha: ${date}\nEvento: ${event}\nPersonas: ${ppl}\n\nNotas: ${notes}\n\nFrase actual: ${phrase}\n\nTareas:\n1) Reescribe la frase (misma intención, 1-2 líneas).\n2) Escribe un texto breve para la web (70-120 palabras).\n3) Devuelve un JSON con: { phrase, webText, cta, hashtags } (máximo 2 hashtags).`;
 }
 
 export function buildComprehensivePrompt({ imageUrl, language, notes, location, date, event, people }) {
@@ -69,6 +76,12 @@ export function buildComprehensivePrompt({ imageUrl, language, notes, location, 
 
   const instructions = languageInstructions[language] || languageInstructions.es;
 
+  // No incluir la imagen completa en el prompt si es muy grande (base64)
+  // Solo indicar si hay imagen disponible
+  const imageInfo = imageUrl ? 
+    (imageUrl.startsWith('data:') ? 'Imagen proporcionada (disponible para contexto visual)' : imageUrl) 
+    : 'No proporcionada';
+
   return `${instructions.system}
 
 Basándote en la información proporcionada, genera contenido completo para un post de Asier González (emprendedor y speaker).
@@ -79,9 +92,10 @@ TODO el contenido generado (phrase, webText, cta, content, title, modalContent, 
 Las NOTAS pueden estar en cualquier idioma, pero TODO tu OUTPUT debe estar en el idioma especificado (${language}).
 
 IMPORTANTE: No uses emojis en el contenido generado, solo texto profesional.
+IMPORTANTE: USA EXCLUSIVAMENTE las NOTAS proporcionadas. NO INVENTES información que no esté en las NOTAS.
 
 INFORMACIÓN DISPONIBLE:
-→ IMAGEN: ${imageUrl || 'No proporcionada'}
+→ IMAGEN: ${imageInfo}
 → IDIOMA DE SALIDA: ${language} (${language === 'es' ? 'ESPAÑOL' : language === 'en' ? 'ENGLISH' : language === 'eu' ? 'EUSKERA' : 'FRANÇAIS'})
 → LOCALIZACIÓN: ${location || 'No especificada'}
 → FECHA: ${date || 'No especificada'}
@@ -130,7 +144,7 @@ CAMPOS DEL BLOG POST:
 15. LOCATION/EVENT/PEOPLE: Devuelve estos campos solo si puedes inferirlos con claridad
 
 Para cada red social, adapta el contenido (TODO en ${language === 'es' ? 'ESPAÑOL' : language === 'en' ? 'ENGLISH' : language === 'eu' ? 'EUSKERA' : 'FRANÇAIS'}):
-→ LinkedIn: Profesional, con máximo 2 hashtags relevantes (#startup #innovación) - EN ${language === 'es' ? 'ESPAÑOL' : language === 'en' ? 'ENGLISH' : language === 'eu' ? 'EUSKERA' : 'FRANÇAIS'}
+→ LinkedIn: USA EXACTAMENTE el mismo contenido que "webText" (el texto de la web). Añade al final máximo 2 hashtags relevantes (#startup #innovación) - TODO EN ${language === 'es' ? 'ESPAÑOL' : language === 'en' ? 'ENGLISH' : language === 'eu' ? 'EUSKERA' : 'FRANÇAIS'}
 → Instagram: Más visual, con máximo 2 hashtags (#startup #buildinpublic) - EN ${language === 'es' ? 'ESPAÑOL' : language === 'en' ? 'ENGLISH' : language === 'eu' ? 'EUSKERA' : 'FRANÇAIS'}
 → Twitter: Conciso, máximo 260 caracteres - EN ${language === 'es' ? 'ESPAÑOL' : language === 'en' ? 'ENGLISH' : language === 'eu' ? 'EUSKERA' : 'FRANÇAIS'}
 

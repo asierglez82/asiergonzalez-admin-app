@@ -30,6 +30,8 @@ export const geminiCloudService = {
       const timeoutId = setTimeout(() => controller.abort(), timeout);
 
       console.log(`🌥️ Gemini Cloud Request - Model: ${model}, Prompt: ${prompt.length} chars`);
+      console.log('📊 Prompt Preview (first 500 chars):', prompt.substring(0, 500));
+      console.log('📊 Prompt Preview (last 500 chars):', prompt.substring(Math.max(0, prompt.length - 500)));
 
       const response = await fetch(GEMINI_CLOUD_FUNCTION_URL, {
         method: 'POST',
