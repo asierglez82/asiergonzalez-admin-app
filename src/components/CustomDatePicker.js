@@ -41,7 +41,7 @@ const CustomDatePicker = ({
         <View style={[styles.iconSquare || {}, { backgroundColor: '#00ca77', borderColor: '#00ca77' }]}>
           <Ionicons name="calendar-outline" size={18} color="#ffffff" />
         </View>
-        <View style={styles.fieldContent || {}}>
+        <View style={[styles.fieldContent || {}, { flex: 1, maxWidth: '100%' }]}>
           <Text style={styles.label || {}}>{label}</Text>
           <input
             type="date"
@@ -54,12 +54,21 @@ const CustomDatePicker = ({
               fontSize: '16px',
               outline: 'none',
               width: '100%',
+              maxWidth: '100%',
               padding: '12px',
               borderRadius: '8px',
               fontFamily: 'inherit',
+              colorScheme: 'dark',
+              boxSizing: 'border-box',
             }}
             placeholder={placeholder}
           />
+          <style>{`
+            input[type="date"]::-webkit-calendar-picker-indicator {
+              filter: invert(1);
+              cursor: pointer;
+            }
+          `}</style>
         </View>
         <View style={[styles.cardAccent || {}, { backgroundColor: '#00ca77' }]} />
       </View>

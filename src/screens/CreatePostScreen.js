@@ -408,24 +408,42 @@ Devuelve SOLO la descripción en MAYÚSCULAS, sin comillas ni formato adicional.
 
   // Función para limpiar la respuesta de la IA y extraer JSON
   const cleanAIResponse = (response) => {
-    // Buscar JSON en la respuesta, puede estar envuelto en markdown
-    const jsonMatch = response.match(/```json\s*([\s\S]*?)\s*```/) || 
-                     response.match(/```\s*([\s\S]*?)\s*```/) ||
-                     response.match(/\{[\s\S]*\}/);
-    
-    if (jsonMatch) {
-      return jsonMatch[1].trim();
+    if (!response) {
+      console.error('[cleanAIResponse] Response is empty or undefined');
+      return '';
     }
     
-    // Si no encuentra bloques de código, buscar JSON directo
-    const jsonStart = response.indexOf('{');
-    const jsonEnd = response.lastIndexOf('}');
+    console.log('[cleanAIResponse] Original response length:', response.length);
+    console.log('[cleanAIResponse] First 100 chars:', response.substring(0, 100));
+    console.log('[cleanAIResponse] Last 100 chars:', response.substring(response.length - 100));
+    
+    // Eliminar posibles espacios o caracteres especiales al inicio y final
+    let cleaned = response.trim();
+    
+    // Método más directo: buscar el primer { y el último }
+    // Esto funciona incluso si hay ```json o cualquier otro texto antes/después
+    const jsonStart = cleaned.indexOf('{');
+    const jsonEnd = cleaned.lastIndexOf('}');
     
     if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-      return response.substring(jsonStart, jsonEnd + 1);
+      const extracted = cleaned.substring(jsonStart, jsonEnd + 1);
+      console.log('[cleanAIResponse] Extracted JSON from position', jsonStart, 'to', jsonEnd);
+      console.log('[cleanAIResponse] First 100 chars of extracted:', extracted.substring(0, 100));
+      
+      // Validar que lo extraído sea JSON válido
+      try {
+        JSON.parse(extracted);
+        console.log('[cleanAIResponse] ✓ Successfully validated extracted JSON');
+        return extracted;
+      } catch (e) {
+        console.error('[cleanAIResponse] ✗ Extracted content is not valid JSON:', e.message);
+        console.error('[cleanAIResponse] ✗ First 200 chars of invalid JSON:', extracted.substring(0, 200));
+        throw new Error('No se pudo extraer JSON válido de la respuesta de la IA');
+      }
     }
     
-    return response;
+    console.error('[cleanAIResponse] ✗ No JSON structure found (no { or })');
+    throw new Error('No se encontró JSON en la respuesta de la IA');
   };
 
   const handleGenerateContents = async () => {
@@ -445,8 +463,9 @@ Devuelve SOLO la descripción en MAYÚSCULAS, sin comillas ni formato adicional.
         const result = await geminiService.generateSmart(prompt);
         console.log('Raw AI response:', result);
         
+        let cleanedResponse; // Declarar fuera del bloque try para acceso en catch
         try {
-          const cleanedResponse = cleanAIResponse(result);
+          cleanedResponse = cleanAIResponse(result);
           console.log('Cleaned AI response:', cleanedResponse);
           const parsed = JSON.parse(cleanedResponse);
           
@@ -498,7 +517,7 @@ Devuelve SOLO la descripción en MAYÚSCULAS, sin comillas ni formato adicional.
         } catch (parseError) {
           console.error('Error parsing AI response:', parseError);
           console.error('Raw response was:', result);
-          console.error('Cleaned response was:', cleanedResponse);
+          console.error('Cleaned response was:', cleanedResponse || 'No se pudo limpiar la respuesta');
           Alert.alert(
             'Error de IA', 
             'No se pudo procesar la respuesta de la IA. Se generará contenido básico.',
