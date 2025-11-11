@@ -37,40 +37,40 @@ export function buildPrompt({ imageUrl, location, date, event, people, language,
 export function buildComprehensivePrompt({ imageUrl, language, notes, location, date, event, people }) {
   const languageInstructions = {
     es: {
-      system: "Eres un asistente de marketing digital especializado en crear contenido para redes sociales y web. Genera contenido profesional y atractivo en español.",
+      system: "Eres un periodista profesional especializado en redacción de contenido corporativo y divulgativo. Tu trabajo es transformar notas en contenido profesional, creíble y fiel a los hechos proporcionados. NUNCA inventes información que no esté en las notas.",
       location: "una ciudad o ubicación relevante",
       event: "un evento, conferencia, o lugar de networking",
       people: "nombres de personas relevantes del ecosistema emprendedor",
-      phrase: "una frase inspiradora sobre emprendimiento, innovación o liderazgo",
-      webText: "un texto para la web que expanda la frase principal",
-      cta: "una llamada a la acción para unirte a la conversación"
+      phrase: "una frase profesional y directa basada estrictamente en las notas",
+      webText: "un texto periodístico para la web que expanda la información de las notas",
+      cta: "una llamada a la acción natural y profesional"
     },
     en: {
-      system: "You are a digital marketing assistant specialized in creating content for social media and web. Generate professional and engaging content in English.",
+      system: "You are a professional journalist specialized in corporate and informative content writing. Your job is to transform notes into professional, credible content that is faithful to the provided facts. NEVER invent information that is not in the notes.",
       location: "a relevant city or location",
       event: "an event, conference, or networking venue",
       people: "names of relevant people from the entrepreneurial ecosystem",
-      phrase: "an inspiring phrase about entrepreneurship, innovation or leadership",
-      webText: "a web text that expands on the main phrase",
-      cta: "a call to action to join the conversation"
+      phrase: "a professional and direct phrase based strictly on the notes",
+      webText: "a journalistic web text that expands on the information from the notes",
+      cta: "a natural and professional call to action"
     },
     eu: {
-      system: "Marketing digitaleko laguntzaile bat zara sare sozialetarako eta weberako edukiak sortzen espezializatua. Euskera profesional eta erakargarrian edukiak sortu.",
+      system: "Kazetari profesional bat zara enpresa-edukiak eta dibulgazio-edukiak idazten espezializatua. Zure lana oharrak eduki profesional, sinesgarri eta emandako egitateen leial bihurtzea da. INOIZ EZ asmatu oharretan ez dagoen informaziorik.",
       location: "hiri edo kokapen garrantzitsu bat",
       event: "ekitaldi, konferentzia edo networking gune bat",
       people: "ekosistema enpresarialeko pertsona garrantzitsuen izenak",
-      phrase: "enpresaritzari, berrikuntzari edo lidergotzari buruzko esaldi inspiratzaile bat",
-      webText: "esaldi nagusia zabaltzen duen web testu bat",
-      cta: "elkarrizketan parte hartzera gonbidatzen duen ekintza-deia"
+      phrase: "oharretan oinarritutako esaldi profesional eta zuzen bat",
+      webText: "oharretako informazioa zabaltzen duen web testu kazetariaritza-estilorako",
+      cta: "ekintza-dei natural eta profesional bat"
     },
     fr: {
-      system: "Vous êtes un assistant marketing digital spécialisé dans la création de contenu pour les réseaux sociaux et le web. Générez du contenu professionnel et engageant en français.",
+      system: "Vous êtes un journaliste professionnel spécialisé dans la rédaction de contenu corporatif et informatif. Votre travail consiste à transformer des notes en contenu professionnel, crédible et fidèle aux faits fournis. N'inventez JAMAIS d'informations qui ne figurent pas dans les notes.",
       location: "une ville ou un lieu pertinent",
       event: "un événement, une conférence ou un lieu de networking",
       people: "des noms de personnes pertinentes de l'écosystème entrepreneurial",
-      phrase: "une phrase inspirante sur l'entrepreneuriat, l'innovation ou le leadership",
-      webText: "un texte web qui développe la phrase principale",
-      cta: "un appel à l'action pour rejoindre la conversation"
+      phrase: "une phrase professionnelle et directe basée strictement sur les notes",
+      webText: "un texte journalistique web qui développe les informations des notes",
+      cta: "un appel à l'action naturel et professionnel"
     }
   };
 
@@ -84,15 +84,29 @@ export function buildComprehensivePrompt({ imageUrl, language, notes, location, 
 
   return `${instructions.system}
 
-Basándote en la información proporcionada, genera contenido completo para un post de Asier González (emprendedor y speaker).
+Basándote ESTRICTAMENTE en la información proporcionada en las NOTAS, genera contenido periodístico profesional para un post de Asier González (emprendedor y speaker).
+
+⚠️ ESTILO PERIODÍSTICO - REGLAS FUNDAMENTALES:
+1. Escribe como un periodista profesional, NO como IA de marketing
+2. Usa lenguaje directo, claro y factual
+3. NO uses frases genéricas de marketing o autoayuda
+4. NO uses superlativos exagerados ("increíble", "extraordinario", "revolucionario")
+5. Basa TODO en hechos concretos de las NOTAS
+6. Sé preciso y específico, evita generalidades
+7. Mantén un tono profesional pero accesible
+8. NO uses emojis ni hashtags dentro del texto (solo al final si aplica)
 
 ⚠️ CRÍTICO - IDIOMA DE SALIDA:
 TODO el contenido generado (phrase, webText, cta, content, title, modalContent, tags, y textos de plataformas) DEBE estar completamente en: ${language === 'es' ? 'ESPAÑOL' : language === 'en' ? 'ENGLISH' : language === 'eu' ? 'EUSKERA' : 'FRANÇAIS'}
 
 Las NOTAS pueden estar en cualquier idioma, pero TODO tu OUTPUT debe estar en el idioma especificado (${language}).
 
-IMPORTANTE: No uses emojis en el contenido generado, solo texto profesional.
-IMPORTANTE: USA EXCLUSIVAMENTE las NOTAS proporcionadas. NO INVENTES información que no esté en las NOTAS.
+⚠️ FIDELIDAD A LAS NOTAS:
+- USA EXCLUSIVAMENTE las NOTAS proporcionadas
+- NO INVENTES información que no esté en las NOTAS
+- Si las notas son breves, genera contenido breve
+- Si falta información, no la supongas: déjala vacía o indica que no está disponible
+- Mantén los nombres, fechas y datos exactos como aparecen en las NOTAS
 
 INFORMACIÓN DISPONIBLE:
 → IMAGEN: ${imageInfo}
@@ -103,15 +117,33 @@ INFORMACIÓN DISPONIBLE:
 → PERSONAS: ${people || 'No especificadas'}
 → NOTAS (pueden estar en otro idioma, pero genera el contenido en ${language}): ${notes || 'Ninguna'}
 
-Genera el siguiente contenido basándote en la información proporcionada:
+Genera el siguiente contenido basándote ESTRICTAMENTE en las NOTAS:
 
-1. FRASE PRINCIPAL: ${instructions.phrase} (1-2 líneas, inspiradora y profesional)
-2. TEXTO WEB: ${instructions.webText} (120-220 palabras, 2-3 párrafos breves)
-3. CTA: ${instructions.cta} (invita a la conversación)
-4. EXTRACCIONES CONTEXTO: Si faltan datos de contexto, intenta inferirlos de las NOTAS o del propio contenido y devuélvelos:
-   • LOCATION (ciudad/ubicación)
-   • EVENT (evento/lugar)
-   • PEOPLE (personas relevantes)
+1. FRASE PRINCIPAL: ${instructions.phrase}
+   - 1-2 líneas máximo
+   - Basada EN LOS HECHOS de las notas, NO en frases inspiracionales genéricas
+   - Directa, profesional y específica
+   - Evita clichés de marketing
+
+2. TEXTO WEB: ${instructions.webText}
+   - 120-220 palabras, 2-3 párrafos breves
+   - Estilo periodístico: quién, qué, cuándo, dónde, por qué
+   - ⚠️ IMPORTANTE: Debe incluir etiquetas HTML para formato
+   - Usa etiquetas: <p> para párrafos, <strong> para énfasis, <br> para saltos
+   - Estructura HTML: <p>Párrafo 1</p><br><p>Párrafo 2</p><br><p>Párrafo 3</p>
+   - Usa información CONCRETA de las notas
+   - NO añadas información no presente en las notas
+   - Estructura clara: contexto → desarrollo → conclusión
+
+3. CTA: ${instructions.cta}
+   - Natural y profesional, NO comercial
+   - Invita a la conversación de forma genuina
+   - Máximo 1 línea
+
+4. EXTRACCIONES CONTEXTO: 
+   - SOLO si puedes extraerlos con certeza de las NOTAS
+   - NO supongas ni inventes datos
+   - Campos: LOCATION, EVENT, PEOPLE
 
 CONTENIDO HTML PARA QUOTE (campo "content"):
 • Devuélvelo como HTML listo para incrustar, siguiendo este esquema y estilos inline:
@@ -119,45 +151,76 @@ CONTENIDO HTML PARA QUOTE (campo "content"):
     <div style="position: relative;margin-bottom: 30px">
       <img style="width: 40px;height: 40px" src="/assets/img/svg/quote.svg" alt="tumb" />
     </div>
-    <p style="font-size: 20px;font-style: italic;margin-bottom: 23px">[FRASE LITERAL]</p>
+    <p style="font-size: 20px;font-style: italic;margin-bottom: 23px">[FRASE LITERAL DE LAS NOTAS]</p>
   </div>
   <br>
-  <p>[PÁRRAFO 1, 50-90 palabras]</p><br>
-  <p>[PÁRRAFO 2, 50-90 palabras]</p><br>
-  <p>[PÁRRAFO 3 opcional, 40-70 palabras]</p>
+  <p>[PÁRRAFO 1: contexto factual, 50-90 palabras]</p><br>
+  <p>[PÁRRAFO 2: desarrollo de la información, 50-90 palabras]</p><br>
+  <p>[PÁRRAFO 3 opcional: conclusión o reflexión, 40-70 palabras]</p>
 
-• No uses emojis ni listas; solo párrafos.
+• Estilo periodístico, basado en HECHOS de las notas
+• No uses emojis ni listas; solo párrafos narrativos
 • TODO el contenido HTML debe estar en ${language === 'es' ? 'ESPAÑOL' : language === 'en' ? 'ENGLISH' : language === 'eu' ? 'EUSKERA' : 'FRANÇAIS'}
 
 CAMPOS DEL BLOG POST:
-4. TÍTULO: Un título atractivo para el blog post (máximo 60 caracteres) - EN ${language === 'es' ? 'ESPAÑOL' : language === 'en' ? 'ENGLISH' : language === 'eu' ? 'EUSKERA' : 'FRANÇAIS'}
-5. AUTOR: "Asier González" (siempre este valor)
-6. FECHA: Usa la fecha proporcionada: "${date || 'Fecha no especificada'}"
-7. CONTENIDO MODAL (modalContent): Contenido HTML completo del blog post (500-1000 palabras) - DEBE estar completamente en ${language === 'es' ? 'ESPAÑOL' : language === 'en' ? 'ENGLISH' : language === 'eu' ? 'EUSKERA' : 'FRANÇAIS'}, independientemente del idioma de las notas
-8. TAGS: Máximo 2 hashtags relevantes separados por espacios (ej: "#startup #innovación") - EN ${language === 'es' ? 'ESPAÑOL' : language === 'en' ? 'ENGLISH' : language === 'eu' ? 'EUSKERA' : 'FRANÇAIS'}
-9. IMAGEN: La imagen será la composición generada automáticamente
-10. MODAL: "mymodal" (siempre este valor)
-11. WIDTH: "1200px" (siempre este valor)
-12. PATH: Ruta del blog post (ej: "/blog/titulo-del-post")
-13. URL: URL completa del blog post (ej: "https://asiergonzalez.es/blog/titulo-del-post")
-14. SLUG: Slug del blog post (ej: "titulo-del-post")
-15. LOCATION/EVENT/PEOPLE: Devuelve estos campos solo si puedes inferirlos con claridad
+4. TÍTULO: Título periodístico basado en las notas (máximo 60 caracteres)
+   - Directo y factual, NO clickbait
+   - EN ${language === 'es' ? 'ESPAÑOL' : language === 'en' ? 'ENGLISH' : language === 'eu' ? 'EUSKERA' : 'FRANÇAIS'}
 
-Para cada red social, adapta el contenido (TODO en ${language === 'es' ? 'ESPAÑOL' : language === 'en' ? 'ENGLISH' : language === 'eu' ? 'EUSKERA' : 'FRANÇAIS'}):
-→ LinkedIn: USA EXACTAMENTE el mismo contenido que "webText" (el texto de la web). Añade al final máximo 2 hashtags relevantes (#startup #innovación) - TODO EN ${language === 'es' ? 'ESPAÑOL' : language === 'en' ? 'ENGLISH' : language === 'eu' ? 'EUSKERA' : 'FRANÇAIS'}
-→ Instagram: Más visual, con máximo 2 hashtags (#startup #buildinpublic) - EN ${language === 'es' ? 'ESPAÑOL' : language === 'en' ? 'ENGLISH' : language === 'eu' ? 'EUSKERA' : 'FRANÇAIS'}
-→ Twitter: Conciso, máximo 260 caracteres - EN ${language === 'es' ? 'ESPAÑOL' : language === 'en' ? 'ENGLISH' : language === 'eu' ? 'EUSKERA' : 'FRANÇAIS'}
+5. AUTOR: "Asier González" (siempre este valor)
+
+6. FECHA: Usa la fecha proporcionada: "${date || 'Fecha no especificada'}"
+
+7. CONTENIDO MODAL (modalContent): Artículo periodístico completo (500-1000 palabras)
+   - Estilo periodístico profesional
+   - Estructura: introducción → desarrollo → conclusión
+   - Basado EXCLUSIVAMENTE en las NOTAS
+   - Sin información inventada o supuesta
+   - EN ${language === 'es' ? 'ESPAÑOL' : language === 'en' ? 'ENGLISH' : language === 'eu' ? 'EUSKERA' : 'FRANÇAIS'}
+
+8. TAGS: Máximo 2 hashtags específicos y relevantes (ej: "#startup #productmanagement")
+   - NO uses hashtags genéricos o vagos
+   - EN ${language === 'es' ? 'ESPAÑOL' : language === 'en' ? 'ENGLISH' : language === 'eu' ? 'EUSKERA' : 'FRANÇAIS'}
+
+9-14. CAMPOS TÉCNICOS:
+   - MODAL: "mymodal"
+   - WIDTH: "1200px"
+   - PATH: "/blog/[slug-del-titulo]"
+   - URL: "https://asiergonzalez.es/blog/[slug-del-titulo]"
+   - SLUG: slug generado del título (minúsculas, guiones)
+
+15. LOCATION/EVENT/PEOPLE: Devuelve SOLO si están explícitos en las NOTAS
+
+CONTENIDO PARA REDES SOCIALES (TODO en ${language === 'es' ? 'ESPAÑOL' : language === 'en' ? 'ENGLISH' : language === 'eu' ? 'EUSKERA' : 'FRANÇAIS'}):
+
+→ LinkedIn: ⚠️ CRÍTICO - USA EXACTAMENTE EL MISMO CONTENIDO QUE "webText" PERO SIN HTML
+   - Toma el texto completo de "webText" y REMUEVE todas las etiquetas HTML
+   - El contenido textual debe ser IDÉNTICO a webText, solo quita: <p>, </p>, <br>, <strong>, </strong>, etc.
+   - Mantén los saltos de línea entre párrafos (usa \n\n para separar párrafos)
+   - Añade al final (en línea aparte) máximo 2 hashtags específicos
+   - NO resumas, NO cambies el texto: solo elimina las etiquetas HTML
+   - Formato: [Texto de webText sin HTML]\n\n[hashtags]
+
+→ Instagram: Versión más visual y concisa del contenido
+   - Basada en las notas, estilo más directo
+   - Máximo 2 hashtags específicos al final
+   - Tono cercano pero profesional
+
+→ Twitter: Versión ultra-concisa
+   - Máximo 260 caracteres
+   - Extrae la idea central de las notas
+   - Directo y factual
 
 Devuelve un JSON con esta estructura:
 {
   "phrase": "string",
-  "webText": "string",
+  "webText": "string con HTML (ejemplo: <p>Párrafo 1</p><br><p>Párrafo 2</p>)",
   "cta": "string",
-  "content": "string",
+  "content": "string con HTML completo (incluye div de quote)",
   "title": "string",
   "author": "Asier González",
   "blogDate": "string",
-  "modalContent": "string",
+  "modalContent": "string con HTML completo del artículo",
   "tags": "string",
   "location": "string opcional",
   "event": "string opcional",
@@ -168,11 +231,15 @@ Devuelve un JSON con esta estructura:
   "url": "string",
   "slug": "string",
   "platforms": {
-    "linkedin": "string",
-    "instagram": "string", 
-    "twitter": "string"
+    "linkedin": "string SIN HTML, mismo texto que webText pero en texto plano con \\n\\n entre párrafos + hashtags al final",
+    "instagram": "string texto plano", 
+    "twitter": "string texto plano"
   }
-}`;
+}
+
+EJEMPLO de webText vs LinkedIn:
+webText: "<p>La mesa redonda de B-Venture analizó la desinversión.</p><br><p>Los expertos coincidieron en varios puntos clave.</p>"
+linkedin: "La mesa redonda de B-Venture analizó la desinversión.\n\nLos expertos coincidieron en varios puntos clave.\n\n#startups #inversión"`;
 }
 
 

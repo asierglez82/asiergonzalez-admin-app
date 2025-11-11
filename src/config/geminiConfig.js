@@ -28,8 +28,8 @@ export const geminiConfig = {
   retryDelay: 1000, // 1 segundo
   
   // Configuración de generación
-  defaultTemperature: 0.7,
-  defaultMaxTokens: 2048,
+  defaultTemperature: 0.2, // Temperatura baja para contenido más fiel a las notas y menos creativo
+  defaultMaxTokens: 8192, // Aumentado para permitir respuestas más largas (blog posts completos)
   
   // Debug y logs
   enableDebugLogs: process.env.NODE_ENV === 'development',

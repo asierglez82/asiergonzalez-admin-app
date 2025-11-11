@@ -343,21 +343,35 @@ const CreatePostScreen = ({ navigation }) => {
     try {
       setGeneratingCTA(true);
       
-      // Prompt simple solo para generar frase
-      const prompt = `Genera una frase inspiradora y profesional para un post de Asier González (emprendedor y speaker).
+      // Prompt periodístico y fiel a las notas
+      const prompt = `Eres un periodista profesional. Genera una frase directa y profesional para un post de Asier González (emprendedor y speaker).
 
-IDIOMA: ${language}
-NOTAS: ${notes || 'Ninguna'}
+⚠️ REGLAS ESTRICTAS:
+1. Basa la frase EXCLUSIVAMENTE en las NOTAS proporcionadas
+2. NO uses frases genéricas de marketing o autoayuda
+3. NO uses superlativos exagerados ("increíble", "extraordinario")
+4. Escribe como un periodista: directo, claro, factual
+5. NO inventes información que no esté en las notas
+6. Si las notas son breves, la frase debe ser breve
 
-La frase debe ser:
-- Inspiradora y motivacional
-- Profesional pero cercana
+IDIOMA DE SALIDA: ${language === 'es' ? 'ESPAÑOL' : language === 'en' ? 'ENGLISH' : language === 'eu' ? 'EUSKERA' : 'FRANÇAIS'}
+
+NOTAS ORIGINALES: ${notes || 'Ninguna'}
+
+INFORMACIÓN ADICIONAL:
+- Localización: ${location || 'No especificada'}
+- Evento: ${event || 'No especificado'}
+- Personas: ${people || 'No especificadas'}
+
+REQUISITOS DE LA FRASE:
+- Basada en HECHOS de las notas, NO en inspiración genérica
+- Profesional y directa, estilo periodístico
 - Máximo 2 líneas
 - En ${language === 'es' ? 'español' : language === 'en' ? 'inglés' : language === 'eu' ? 'euskera' : 'francés'}
 
 Devuelve SOLO la frase, sin comillas ni formato adicional.`;
 
-      const result = await geminiService.generateSmart(prompt);
+      const result = await geminiService.generateSmart(prompt, { temperature: 0.2 });
       
       // Limpiar la respuesta (quitar comillas y espacios extra)
       const cleanPhrase = result.replace(/^["']|["']$/g, '').trim();
@@ -420,6 +434,10 @@ Devuelve SOLO la descripción en MAYÚSCULAS, sin comillas ni formato adicional.
     // Eliminar posibles espacios o caracteres especiales al inicio y final
     let cleaned = response.trim();
     
+    // Remover marcadores de código si existen
+    cleaned = cleaned.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '');
+    cleaned = cleaned.trim();
+    
     // Método más directo: buscar el primer { y el último }
     // Esto funciona incluso si hay ```json o cualquier otro texto antes/después
     const jsonStart = cleaned.indexOf('{');
@@ -429,15 +447,25 @@ Devuelve SOLO la descripción en MAYÚSCULAS, sin comillas ni formato adicional.
       const extracted = cleaned.substring(jsonStart, jsonEnd + 1);
       console.log('[cleanAIResponse] Extracted JSON from position', jsonStart, 'to', jsonEnd);
       console.log('[cleanAIResponse] First 100 chars of extracted:', extracted.substring(0, 100));
+      console.log('[cleanAIResponse] Last 100 chars of extracted:', extracted.substring(Math.max(0, extracted.length - 100)));
       
       // Validar que lo extraído sea JSON válido
       try {
-        JSON.parse(extracted);
+        const parsed = JSON.parse(extracted);
         console.log('[cleanAIResponse] ✓ Successfully validated extracted JSON');
+        console.log('[cleanAIResponse] ✓ JSON keys:', Object.keys(parsed).join(', '));
         return extracted;
       } catch (e) {
         console.error('[cleanAIResponse] ✗ Extracted content is not valid JSON:', e.message);
-        console.error('[cleanAIResponse] ✗ First 200 chars of invalid JSON:', extracted.substring(0, 200));
+        console.error('[cleanAIResponse] ✗ First 500 chars of invalid JSON:', extracted.substring(0, 500));
+        console.error('[cleanAIResponse] ✗ Last 500 chars of invalid JSON:', extracted.substring(Math.max(0, extracted.length - 500)));
+        
+        // Intentar detectar si la respuesta está truncada
+        if (extracted.length > 1000 && !extracted.trim().endsWith('}')) {
+          console.error('[cleanAIResponse] ⚠️ Response appears to be truncated (doesn\'t end with })');
+          throw new Error('La respuesta de la IA está incompleta o truncada. Intenta con notas más breves o simplifica el contenido.');
+        }
+        
         throw new Error('No se pudo extraer JSON válido de la respuesta de la IA');
       }
     }

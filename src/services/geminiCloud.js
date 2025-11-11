@@ -10,8 +10,8 @@ export const geminiCloudService = {
       const {
         model = 'gemini-2.5-flash-lite',
         system = null,
-        temperature = 0.7,
-        maxOutputTokens = 2048,
+        temperature = 0.2, // Temperatura baja para contenido más fiel a las notas
+        maxOutputTokens = 8192, // Aumentado para permitir respuestas más largas
         timeout = 30000
       } = options;
 
@@ -55,9 +55,21 @@ export const geminiCloudService = {
         throw new Error(result.error || 'Error desconocido en Gemini Cloud Function');
       }
 
-      console.log(`✅ Gemini Cloud Response - ${result.data.responseLength} chars`);
+      const responseText = result.data?.text || '';
+      const responseLength = responseText.length || 0;
+      const finishReason = result.data?.finishReason || 'unknown';
+      const usage = result.data?.usage || {};
+      
+      console.log(`✅ Gemini Cloud Response - ${responseLength} chars`);
+      console.log(`📊 Finish Reason: ${finishReason}`);
+      console.log(`📊 Usage:`, JSON.stringify(usage));
+      
+      // Advertir si la respuesta fue truncada
+      if (finishReason === 'MAX_TOKENS' || finishReason === 'LENGTH') {
+        console.warn('⚠️ La respuesta fue truncada por límite de tokens. Considera aumentar maxOutputTokens.');
+      }
 
-      return result.data.text;
+      return responseText;
 
     } catch (error) {
       console.error('❌ Error en Gemini Cloud Service:', error);
@@ -155,8 +167,8 @@ export async function generateSmartCloud(prompt, opts = {}) {
     const model = opts.model || opts.directModel || 'gemini-2.5-flash-lite';
     return await geminiCloudService.makeGeminiRequest(prompt, { 
       model,
-      temperature: opts.temperature || 0.7,
-      maxOutputTokens: opts.maxOutputTokens || 2048
+      temperature: opts.temperature !== undefined ? opts.temperature : 0.2, // Temperatura baja por defecto para contenido más fiel
+      maxOutputTokens: opts.maxOutputTokens || 8192 // Aumentado para permitir respuestas más largas
     });
   } catch (error) {
     console.error('Error en generateSmartCloud:', error);
