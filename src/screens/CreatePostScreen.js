@@ -55,6 +55,7 @@ const CreatePostScreen = ({ navigation }) => {
   const [people, setPeople] = useState('');
   const [language, setLanguage] = useState('es');
   const [phrase, setPhrase] = useState('');
+  const [phraseFontSize, setPhraseFontSize] = useState(36); // Tamaño de fuente por defecto
   const [cta, setCta] = useState('');
   const [webText, setWebText] = useState('');
   const [notes, setNotes] = useState('');
@@ -1451,6 +1452,69 @@ Devuelve SOLO la descripción en MAYÚSCULAS, sin comillas ni formato adicional.
           onChangeText={setPhrase}
           multiline
         />
+        
+        {/* Control de tamaño de fuente de la frase */}
+        <View style={styles.fontSizeControl}>
+          <Text style={styles.fontSizeLabel}>Tamaño de fuente: {phraseFontSize}px</Text>
+          <View style={styles.fontSizeSliderContainer}>
+            <TouchableOpacity 
+              style={styles.fontSizeButton}
+              onPress={() => setPhraseFontSize(Math.max(20, phraseFontSize - 2))}
+            >
+              <Ionicons name="remove" size={16} color="#FFFFFF" />
+            </TouchableOpacity>
+            <View style={styles.fontSizeSlider}>
+              {Platform.OS === 'web' ? (
+                <input 
+                  type="range" 
+                  min="20" 
+                  max="60" 
+                  value={phraseFontSize}
+                  onChange={(e) => setPhraseFontSize(parseInt(e.target.value))}
+                  style={{
+                    width: '100%',
+                    accentColor: '#00ca77',
+                    cursor: 'pointer'
+                  }}
+                />
+              ) : (
+                <View style={styles.sliderTrack}>
+                  <View style={[styles.sliderFill, { width: `${((phraseFontSize - 20) / 40) * 100}%` }]} />
+                  <TouchableOpacity 
+                    style={[styles.sliderThumb, { left: `${((phraseFontSize - 20) / 40) * 100}%` }]}
+                    onPress={() => {}}
+                  />
+                </View>
+              )}
+            </View>
+            <TouchableOpacity 
+              style={styles.fontSizeButton}
+              onPress={() => setPhraseFontSize(Math.min(60, phraseFontSize + 2))}
+            >
+              <Ionicons name="add" size={16} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.fontSizePresets}>
+            <TouchableOpacity 
+              style={[styles.presetButton, phraseFontSize === 28 && styles.presetButtonActive]}
+              onPress={() => setPhraseFontSize(28)}
+            >
+              <Text style={styles.presetButtonText}>Pequeño</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.presetButton, phraseFontSize === 36 && styles.presetButtonActive]}
+              onPress={() => setPhraseFontSize(36)}
+            >
+              <Text style={styles.presetButtonText}>Normal</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.presetButton, phraseFontSize === 44 && styles.presetButtonActive]}
+              onPress={() => setPhraseFontSize(44)}
+            >
+              <Text style={styles.presetButtonText}>Grande</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
 
       {/* Preview del montaje */}
@@ -1637,13 +1701,13 @@ Devuelve SOLO la descripción en MAYÚSCULAS, sin comillas ni formato adicional.
               </div>
               <div style={{
                 color: '#333B4D',
-                fontSize: isTablet ? '28px' : isMobile ? '18px' : '40px',
+                fontSize: `${phraseFontSize}px`,
                 fontWeight: '300',
                 fontFamily: 'Satoshi-Light, -apple-system, BlinkMacSystemFont, sans-serif',
                 fontStyle: 'italic',
                 textAlign: 'center',
-                lineHeight: isTablet ? '34px' : isMobile ? '22px' : '48px',
-                marginTop: isTablet ? '0px' : isMobile ? '-10px' : '10px'
+                lineHeight: `${phraseFontSize + 8}px`,
+                marginTop: '10px'
               }}>"{phrase}"</div>
               </>
               )}
@@ -1782,7 +1846,7 @@ Devuelve SOLO la descripción en MAYÚSCULAS, sin comillas ni formato adicional.
                 <View style={[styles.composeButton, isTablet && styles.composeButtonTablet, isMobile && styles.composeButtonMobile]}>
                   <Text style={[styles.composeButtonText, isTablet && styles.composeButtonTextTablet, isMobile && styles.composeButtonTextMobile]}>ASIER GONZALEZ</Text>
                 </View>
-                <Text style={[styles.composePhrase, isTablet && styles.composePhraseTablet, isMobile && styles.composePhraseMobile]}>"{phrase}"</Text>
+                <Text style={[styles.composePhrase, isTablet && styles.composePhraseTablet, isMobile && styles.composePhraseMobile, { fontSize: phraseFontSize, lineHeight: phraseFontSize + 8 }]}>"{phrase}"</Text>
                 </>
                 )}
                 
@@ -2759,12 +2823,14 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   composeContainerTablet: {
-    width: 800,
-    height: 800,
+    width: 1080,
+    height: 1080,
+    transform: [{ scale: 0.74 }], // Escalar visualmente pero mantener resolución de captura
   },
   composeContainerMobile: {
-    width: 350,
-    height: 350,
+    width: 1080,
+    height: 1080,
+    transform: [{ scale: 0.32 }], // Escalar visualmente pero mantener resolución de captura
   },
   composeBg: {
     width: 1080,
@@ -2777,18 +2843,18 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   composeBgTablet: {
-    width: 800,
-    height: 800,
-    paddingTop: 15,
-    paddingHorizontal: 30,
-    paddingBottom: 45,
+    width: 1080,
+    height: 1080,
+    paddingTop: 20,
+    paddingHorizontal: 40,
+    paddingBottom: 60,
   },
   composeBgMobile: {
-    width: 350,
-    height: 350,
-    paddingTop: 10,
-    paddingHorizontal: 20,
-    paddingBottom: 30,
+    width: 1080,
+    height: 1080,
+    paddingTop: 20,
+    paddingHorizontal: 40,
+    paddingBottom: 60,
   },
   composeWhiteBox: {
     backgroundColor: '#FFFFFF',
@@ -2806,20 +2872,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   composeWhiteBoxTablet: {
-    borderRadius: 15,
-    padding: 40,
-    width: 600,
-    minHeight: 550,
-    marginTop: 15,
-    marginBottom: 30,
+    borderRadius: 20,
+    padding: 60,
+    width: 800,
+    minHeight: 750,
+    marginTop: 20,
+    marginBottom: 40,
   },
   composeWhiteBoxMobile: {
-    borderRadius: 10,
-    padding: 20,
-    width: 260,
-    minHeight: 250,
-    marginTop: 10,
-    marginBottom: 20,
+    borderRadius: 20,
+    padding: 60,
+    width: 800,
+    minHeight: 750,
+    marginTop: 20,
+    marginBottom: 40,
   },
   composePhoto: {
     width: '100%',
@@ -2828,14 +2894,14 @@ const styles = StyleSheet.create({
     marginBottom: 50,
   },
   composePhotoTablet: {
-    height: 400,
-    borderRadius: 12,
-    marginBottom: 30,
+    height: 600,
+    borderRadius: 16,
+    marginBottom: 50,
   },
   composePhotoMobile: {
-    height: 150,
-    borderRadius: 8,
-    marginBottom: 15,
+    height: 600,
+    borderRadius: 16,
+    marginBottom: 50,
   },
   composePhotoPlaceholder: {
     width: '100%',
@@ -2852,14 +2918,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   composePhotoPlaceholderTablet: {
-    height: 400,
-    borderRadius: 12,
-    marginBottom: 30,
+    height: 600,
+    borderRadius: 16,
+    marginBottom: 50,
   },
   composePhotoPlaceholderMobile: {
-    height: 150,
-    borderRadius: 8,
-    marginBottom: 15,
+    height: 600,
+    borderRadius: 16,
+    marginBottom: 50,
   },
   composePhotoPlaceholderText: {
     color: '#666',
@@ -2870,10 +2936,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   composePhotoPlaceholderTextTablet: {
-    fontSize: 16,
+    fontSize: 20,
   },
   composePhotoPlaceholderTextMobile: {
-    fontSize: 12,
+    fontSize: 20,
   },
   composeInfo: {
     flexDirection: 'row',
@@ -2882,11 +2948,12 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   composeInfoTablet: {
-    gap: 12,
+    gap: 16,
   },
   composeInfoMobile: {
-    flexDirection: 'column',
-    gap: 8,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
   },
   composeInfoItem: {
     flexDirection: 'row',
@@ -2896,12 +2963,12 @@ const styles = StyleSheet.create({
     minWidth: '45%',
   },
   composeInfoItemTablet: {
-    gap: 12,
+    gap: 16,
   },
   composeInfoItemMobile: {
-    gap: 8,
-    flex: 0,
-    minWidth: '100%',
+    gap: 16,
+    flex: 1,
+    minWidth: '45%',
   },
   composeInfoText: {
     color: '#666',
@@ -2911,10 +2978,10 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   composeInfoTextTablet: {
-    fontSize: 20,
+    fontSize: 24,
   },
   composeInfoTextMobile: {
-    fontSize: 14,
+    fontSize: 24,
   },
   composePhrase: {
     color: '#333B4D',
@@ -2927,14 +2994,14 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   composePhraseTablet: {
-    fontSize: 28,
-    lineHeight: 34,
-    marginTop: 0,
+    fontSize: 36,
+    lineHeight: 44,
+    marginTop: 10,
   },
   composePhraseMobile: {
-    fontSize: 18,
-    lineHeight: 22,
-    marginTop: -10,
+    fontSize: 36,
+    lineHeight: 44,
+    marginTop: 10,
   },
   composeButton: {
     backgroundColor: '#2c3e50',
@@ -2947,18 +3014,18 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   composeButtonTablet: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 6,
-    marginBottom: 18,
-    right: 40,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 8,
+    right: 60,
+    top: 930,
   },
   composeButtonMobile: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 4,
-    marginBottom: 12,
-    right: 20,
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 8,
+    right: 60,
+    top: 930,
   },
   composeButtonText: {
     color: '#FFFFFF',
@@ -2968,12 +3035,12 @@ const styles = StyleSheet.create({
     fontFamily: 'Satoshi',
   },
   composeButtonTextTablet: {
-    fontSize: 14,
-    letterSpacing: 1.5,
+    fontSize: 18,
+    letterSpacing: 2,
   },
   composeButtonTextMobile: {
-    fontSize: 10,
-    letterSpacing: 1,
+    fontSize: 18,
+    letterSpacing: 2,
   },
   composeQuote: {
     color: '#2c3e50',
@@ -3349,6 +3416,93 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(154, 122, 255, 0.1)',
     padding: 8,
     borderRadius: 6,
+  },
+  // Estilos para control de tamaño de fuente
+  fontSizeControl: {
+    marginTop: 16,
+    padding: 16,
+    backgroundColor: 'rgba(0, 202, 119, 0.1)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 202, 119, 0.2)',
+  },
+  fontSizeLabel: {
+    color: '#00ca77',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  fontSizeSliderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  fontSizeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#00ca77',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fontSizeSlider: {
+    flex: 1,
+    height: 40,
+    justifyContent: 'center',
+  },
+  sliderTrack: {
+    height: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 3,
+    position: 'relative',
+  },
+  sliderFill: {
+    height: 6,
+    backgroundColor: '#00ca77',
+    borderRadius: 3,
+    position: 'absolute',
+    left: 0,
+    top: 0,
+  },
+  sliderThumb: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    position: 'absolute',
+    top: -7,
+    marginLeft: -10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  fontSizePresets: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  presetButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+  },
+  presetButtonActive: {
+    backgroundColor: '#00ca77',
+    borderColor: '#00ca77',
+  },
+  presetButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
 
